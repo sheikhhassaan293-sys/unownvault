@@ -7,6 +7,10 @@ export async function GET(request: NextRequest) {
   const code = url.searchParams.get("code");
   const next = url.searchParams.get("next") || "/";
   const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/";
+  // Discord sent them back with an error (e.g. they pressed Cancel)
+  if (url.searchParams.get("error") || url.searchParams.get("error_description")) {
+    return NextResponse.redirect(new URL("/login?error=discord", url.origin));
+  }
   if (code) {
     const db = await sbServer();
     const { data, error } = await db.auth.exchangeCodeForSession(code);

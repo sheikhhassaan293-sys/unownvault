@@ -14,7 +14,7 @@ export default function OfflinePage() {
         </p>
         {/* plain <a> on purpose: a full reload is the right retry when offline */}
         {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-        <a className="btn block" href="/">
+        <a className="btn btn-block" href="/">
           Try again
         </a>
       </div>

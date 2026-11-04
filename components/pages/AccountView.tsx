@@ -29,10 +29,10 @@ export function AccountView({ subs }: { subs: Sub[] }) {
             Sign in to see your plan, orders and custom request quotes.
           </p>
           <div className="stack">
-            <Link className="btn block" href="/login">
+            <Link className="btn btn-block" href="/login">
               Log in
             </Link>
-            <Link className="btn ghost block" href="/signup">
+            <Link className="btn ghost btn-block" href="/signup">
               Create an account
             </Link>
           </div>
@@ -100,7 +100,7 @@ export function AccountView({ subs }: { subs: Sub[] }) {
               </div>
               <div className="stack" style={{ marginTop: 20 }}>
                 <button
-                  className="btn ghost block"
+                  className="btn ghost btn-block"
                   onClick={() => {
                     const url = (active as { manage_url?: string | null }).manage_url;
                     if (live && url) window.open(url, "_blank", "noopener");

@@ -200,7 +200,7 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
               <span>PAYPAL</span>
               <span>CRYPTO</span>
             </div>
-            <button className="btn block" disabled={settings.maintenance || starting} onClick={startWhop}>
+            <button className="btn btn-block" disabled={settings.maintenance || starting} onClick={startWhop}>
               {settings.maintenance ? "Checkout paused (maintenance)" : starting ? "Opening secure checkout…" : `Pay ${charged}`}
             </button>
             {payError && (
@@ -222,7 +222,7 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
           <div className="stack">
             <p className="muted">Sign in first so your order shows up in your account and we can deliver it.</p>
             <button
-              className="btn block"
+              className="btn btn-block"
               onClick={() => {
                 onClose();
                 navigate("/login");
@@ -231,7 +231,7 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
               Log in
             </button>
             <button
-              className="btn ghost block"
+              className="btn ghost btn-block"
               onClick={() => {
                 onClose();
                 navigate("/signup");
@@ -266,7 +266,7 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
               this demo.
             </span>
             <button
-              className="btn block"
+              className="btn btn-block"
               onClick={() => {
                 recordOrder(isSub ? "completed" : "pending", "whop");
                 setStep("success");
@@ -308,7 +308,7 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
               </label>
             </div>
             {payError && <span className="err">{payError}</span>}
-            <button className="btn block" type="submit" disabled={starting}>
+            <button className="btn btn-block" type="submit" disabled={starting}>
               Submit for confirmation
             </button>
             <button type="button" className="linkish" onClick={() => setStep("summary")}>
@@ -336,7 +336,7 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
             <div className="stack" style={{ marginTop: 18 }}>
               {user ? (
                 <button
-                  className="btn block"
+                  className="btn btn-block"
                   onClick={() => {
                     onClose();
                     navigate("/account");
@@ -346,7 +346,7 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
                 </button>
               ) : (
                 <button
-                  className="btn block"
+                  className="btn btn-block"
                   onClick={() => {
                     onClose();
                     navigate("/signup");
@@ -355,7 +355,7 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
                   Create an account to track it
                 </button>
               )}
-              <button className="btn ghost block" onClick={onClose}>
+              <button className="btn ghost btn-block" onClick={onClose}>
                 Done
               </button>
             </div>

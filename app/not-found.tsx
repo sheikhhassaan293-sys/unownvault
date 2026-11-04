@@ -10,10 +10,10 @@ export default function NotFound() {
           That page doesn&apos;t exist. Try one of these instead.
         </p>
         <div className="stack">
-          <Link className="btn block" href="/">
+          <Link className="btn btn-block" href="/">
             Home
           </Link>
-          <Link className="btn ghost block" href="/services">
+          <Link className="btn ghost btn-block" href="/services">
             Services
           </Link>
         </div>

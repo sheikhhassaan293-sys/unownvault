@@ -144,7 +144,7 @@ export function RequestForm() {
           </div>
           <div className="f full">
             {sendError && <span className="err">Couldn&apos;t send: {sendError}</span>}
-            <button className="btn block" type="submit" disabled={busy}>
+            <button className="btn btn-block" type="submit" disabled={busy}>
               {busy ? "Sending…" : "Send request"}
             </button>
           </div>

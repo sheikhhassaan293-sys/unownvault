@@ -195,7 +195,7 @@ export function AdminView() {
             {user ? "This account doesn't have admin access." : "Log in with the owner account to manage the site."}
           </p>
           {!user && (
-            <Link className="btn block" href="/login">
+            <Link className="btn btn-block" href="/login">
               Log in
             </Link>
           )}
