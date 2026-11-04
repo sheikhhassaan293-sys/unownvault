@@ -1,12 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import type { CustomRequest, Order, SubscriptionTier, UserSubscription } from "@/lib/types";
 import { Price } from "../providers/Currency";
 import { useSession } from "../providers/Session";
 import { useSettings } from "../providers/Settings";
 import { useToast } from "../providers/Toast";
-import { Link } from "../providers/Transition";
+import { Link, useThemedNavigate } from "../providers/Transition";
 import { daysUntil, Reveal, useNow } from "../ui";
 import { RequestRow } from "./RequestForm";
 
@@ -28,7 +27,7 @@ export function AccountView({ subs, orders, requests }: { subs: Sub[]; orders: O
   const { user, ready, signOut, myRequests } = useSession();
   const { patreon_enabled } = useSettings();
   const toast = useToast();
-  const router = useRouter();
+  const navigate = useThemedNavigate();
   const now = useNow(60_000);
 
   if (!ready) return <div style={{ minHeight: "60vh" }} />;
@@ -70,7 +69,7 @@ export function AccountView({ subs, orders, requests }: { subs: Sub[]; orders: O
             className="btn ghost sm"
             onClick={() => {
               signOut();
-              router.push("/");
+              navigate("/");
             }}
           >
             Sign out

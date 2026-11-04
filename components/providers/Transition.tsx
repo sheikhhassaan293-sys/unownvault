@@ -6,7 +6,8 @@
  */
 import { motion } from "framer-motion";
 import NextLink from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { STATIC, toHref, useAppPath as usePathname } from "@/lib/paths";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ComponentProps } from "react";
 import { themeForPath, themes, type ThemeKey } from "@/lib/themes";
 
@@ -24,6 +25,14 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
     (href: string) => {
       const path = href.split("#")[0].split("?")[0] || "/";
       const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (STATIC) {
+        if (reduce || path === pathname) {
+          window.location.href = toHref(href);
+          return;
+        }
+        setWipe({ href, path, theme: themeForPath(path), phase: "in" });
+        return;
+      }
       if (reduce || path === pathname || wipe) {
         router.push(href);
         return;
@@ -32,6 +41,16 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
     },
     [pathname, router, wipe],
   );
+
+  useEffect(() => {
+    if (!STATIC) return;
+    try {
+      const th = sessionStorage.getItem("uv-wipe") as ThemeKey | null;
+      sessionStorage.removeItem("uv-wipe");
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- finishing the wipe started on the previous page
+      if (th && themes[th]) setWipe({ href: "", path: "", theme: th, phase: "out" });
+    } catch {}
+  }, []);
 
   // once the new route is on screen, clear the wipe
   useEffect(() => {
@@ -44,6 +63,13 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
 
   const onDone = () => {
     if (!wipe) return;
+    if (wipe.phase === "in" && STATIC) {
+      try {
+        sessionStorage.setItem("uv-wipe", wipe.theme);
+      } catch {}
+      window.location.href = toHref(wipe.href);
+      return;
+    }
     if (wipe.phase === "in") {
       setWipe({ ...wipe, phase: "hold" });
       router.push(wipe.href);
@@ -63,7 +89,7 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
           className="wipe"
           aria-hidden="true"
           style={{ background: t.bg, ["--wacc" as string]: t.accent }}
-          initial={{ x: "-101%" }}
+          initial={{ x: STATIC && wipe.phase === "out" ? "0%" : "-101%" }}
           animate={{ x: wipe.phase === "out" ? "101%" : "0%" }}
           transition={{ duration: wipe.phase === "out" ? 0.32 : 0.27, ease: EASE }}
           onAnimationComplete={onDone}
@@ -78,6 +104,22 @@ export const useThemedNavigate = () => useContext(NavCtx);
 /** Drop-in for next/link that plays the wipe between themed pages. */
 export function Link({ href, onClick, ...rest }: ComponentProps<typeof NextLink> & { href: string }) {
   const navigate = useThemedNavigate();
+  if (STATIC) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { prefetch, replace, scroll, ...a } = rest as typeof rest & { prefetch?: unknown; replace?: unknown; scroll?: unknown };
+    return (
+      <a
+        href={toHref(href)}
+        {...(a as React.AnchorHTMLAttributes<HTMLAnchorElement>)}
+        onClick={(e) => {
+          onClick?.(e as never);
+          if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+          e.preventDefault();
+          navigate(href);
+        }}
+      />
+    );
+  }
   return (
     <NextLink
       href={href}

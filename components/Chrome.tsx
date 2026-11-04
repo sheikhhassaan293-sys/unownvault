@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { useAppPath as usePathname } from "@/lib/paths";
 import { useEffect, useState } from "react";
 import { navRoutes, themeForPath, themes } from "@/lib/themes";
 import { LogoMark, Wordmark } from "./Logo";

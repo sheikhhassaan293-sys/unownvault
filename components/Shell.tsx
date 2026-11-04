@@ -1,7 +1,7 @@
 "use client";
 
 import { MotionConfig } from "framer-motion";
-import { usePathname } from "next/navigation";
+import { useAppPath as usePathname } from "@/lib/paths";
 import { useEffect, useRef, type CSSProperties } from "react";
 import type { SiteSettings } from "@/lib/types";
 import { themeForPath, themeVars } from "@/lib/themes";
@@ -42,7 +42,7 @@ export function Shell({ settings, children }: { settings: SiteSettings; children
 
   // PWA: service worker (production only so dev never serves stale files)
   useEffect(() => {
-    if (process.env.NODE_ENV === "production" && "serviceWorker" in navigator) {
+    if (process.env.NODE_ENV === "production" && process.env.NEXT_PUBLIC_STATIC_EXPORT !== "1" && "serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
   }, []);

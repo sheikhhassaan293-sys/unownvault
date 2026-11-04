@@ -1,14 +1,13 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { themes } from "@/lib/themes";
 import { usernameProblem } from "@/lib/username";
 import { LogoMark } from "../Logo";
 import { useSession, type DemoUser } from "../providers/Session";
 import { useSettings } from "../providers/Settings";
-import { Link } from "../providers/Transition";
+import { Link, useThemedNavigate } from "../providers/Transition";
 
 const EASE = [0.2, 0.7, 0.2, 1] as const;
 const pane = { initial: { opacity: 0, x: 24 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: -24 }, transition: { duration: 0.28, ease: EASE } };
@@ -42,7 +41,7 @@ function ProviderButtons({ onPick }: { onPick: (p: DemoUser["provider"]) => void
 
 /* ─────────────────────────── Sign up → trainer name → welcome ─────────────────────────── */
 export function SignupFlow({ taken }: { taken: string[] }) {
-  const router = useRouter();
+  const navigate = useThemedNavigate();
   const { signIn } = useSession();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [provider, setProvider] = useState<DemoUser["provider"]>("email");
@@ -189,7 +188,7 @@ export function SignupFlow({ taken }: { taken: string[] }) {
                 <p className="muted" style={{ margin: "8px 0 24px" }}>
                   The vault is open.
                 </p>
-                <button className="btn" onClick={() => router.push("/")}>
+                <button className="btn" onClick={() => navigate("/")}>
                   Enter
                 </button>
               </motion.div>
@@ -222,13 +221,13 @@ function WelcomeBars() {
 
 /* ─────────────────────────── Log in ─────────────────────────── */
 export function LoginForm() {
-  const router = useRouter();
+  const navigate = useThemedNavigate();
   const { signIn } = useSession();
   const [email, setEmail] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const go = (provider: DemoUser["provider"]) => {
     signIn({ username: "NightHunter_7", email: provider === "email" ? email : null, provider });
-    router.push("/account");
+    navigate("/account");
   };
   return (
     <div className="panel auth-card">
