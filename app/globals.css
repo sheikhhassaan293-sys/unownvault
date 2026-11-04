@@ -211,10 +211,13 @@
   .cmp .hl { color: var(--acc) !important; }
 
   /* ── currency switch ─────────────────────────── */
-  .cur { display: inline-flex; border: 1px solid rgba(var(--rgb), 0.25); border-radius: 4px; overflow: hidden; font-family: var(--fm); font-size: 11px; letter-spacing: 0.08em; }
-  .cur button { padding: 7px 9px; color: var(--dim); background: none; border: 0; }
-  .cur button:hover { color: var(--text); }
-  .cur button.on { background: rgba(var(--rgb), 0.16); color: var(--acc); }
+  .cur { position: relative; display: inline-flex; align-items: center; }
+  .cur select { appearance: none; -webkit-appearance: none; font-family: var(--fm); font-size: 12px; letter-spacing: 0.1em; color: var(--acc); background: rgba(var(--rgb), 0.08); border: 1px solid rgba(var(--rgb), 0.3); border-radius: 4px; padding: 9px 32px 9px 12px; cursor: pointer; outline: none; min-height: 38px; }
+  .cur select:hover, .cur select:focus-visible { border-color: var(--acc); }
+  .cur::after { content: ""; position: absolute; right: 12px; top: 50%; width: 6px; height: 6px; border-right: 1.5px solid var(--acc); border-bottom: 1.5px solid var(--acc); transform: translateY(-70%) rotate(45deg); pointer-events: none; }
+  .cur select option { background: var(--bg2); color: var(--text); }
+  .avail { display: flex; gap: 12px; align-items: flex-start; margin-top: 28px; max-width: 72ch; color: var(--muted); font-size: 15px; }
+  .avail b { font-family: var(--fm); color: var(--acc); font-weight: 600; }
 
   /* ── SERVICES ────────────────────────────────── */
   .chips { display: flex; gap: 8px; flex-wrap: wrap; }

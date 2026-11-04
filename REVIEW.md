@@ -16,7 +16,7 @@ npm run dev        # http://localhost:3000
 - Weekly/monthly toggle, featured tier with animated edge, comparison table built from the data.
 - Service grid with category filter; featured service is the big card.
 - Offer feed with live countdowns; expired and not-yet-started offers hide themselves.
-- Display currency switcher (USD / EUR / GBP / PKR), remembered per visitor.
+- Display currency switcher (USD, EUR, GBP, JPY, CZK, CAD, AUD, CHF, PLN, SEK), remembered per visitor.
 - Custom request form with validation, image preview and a success state with a request ID.
 - Trainer-name rules: 3–20 chars, letters/numbers/_, profanity filter (`lib/username.ts`).
 - Mobile bottom tab bar, ShardBullet bullets, fonts self-hosted via `next/font`.

@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { Currency } from "@/lib/types";
 import { useSettings } from "./Settings";
 
-export const DISPLAY_CURRENCIES: Currency[] = ["USD", "EUR", "GBP", "PKR"];
+export const DISPLAY_CURRENCIES: Currency[] = ["USD", "EUR", "GBP", "JPY", "CZK", "CAD", "AUD", "CHF", "PLN", "SEK"];
 const KEY = "uv-currency";
 
 type Ctx = {
@@ -18,14 +18,13 @@ type Ctx = {
 const CurrencyCtx = createContext<Ctx | null>(null);
 
 function fmt(n: number, cur: Currency) {
-  if (cur === "PKR") {
-    return "Rs " + new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.round(n / 10) * 10);
-  }
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: cur,
-    minimumFractionDigits: Number.isInteger(n) ? 0 : 2,
-    maximumFractionDigits: 2,
+    // CAD / AUD keep their prefix (CA$, A$) so they can't be mistaken for USD
+    currencyDisplay: cur === "CAD" || cur === "AUD" ? "symbol" : "narrowSymbol",
+    minimumFractionDigits: Number.isInteger(n) || cur === "JPY" ? 0 : 2,
+    maximumFractionDigits: cur === "JPY" ? 0 : 2,
   }).format(n);
 }
 
@@ -71,13 +70,16 @@ export function useMoney() {
 export function CurrencySwitch({ className = "" }: { className?: string }) {
   const { currency, setCurrency } = useMoney();
   return (
-    <div className={`cur ${className}`} role="group" aria-label="Display currency">
-      {DISPLAY_CURRENCIES.map((c) => (
-        <button key={c} type="button" className={c === currency ? "on" : ""} aria-pressed={c === currency} onClick={() => setCurrency(c)}>
-          {c}
-        </button>
-      ))}
-    </div>
+    <label className={`cur ${className}`}>
+      <span className="sr-only">Display currency</span>
+      <select value={currency} onChange={(e) => setCurrency(e.target.value as Currency)}>
+        {DISPLAY_CURRENCIES.map((c) => (
+          <option key={c} value={c}>
+            {c}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 

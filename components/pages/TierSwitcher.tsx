@@ -11,6 +11,20 @@ import { Reveal } from "../ui";
 
 const EASE = [0.2, 0.7, 0.2, 1] as const;
 
+/** Shiny / shundo items depend on what's around — flag them and explain in the footnote. */
+const DEPENDS = /shiny|shundo/i;
+const flag = (text: string) =>
+  DEPENDS.test(text) ? (
+    <>
+      {text}
+      <b className="acc mono" aria-label="(depends on availability)">
+        *
+      </b>
+    </>
+  ) : (
+    text
+  );
+
 export function TierSwitcher({ tiers }: { tiers: SubscriptionTier[] }) {
   const [period, setPeriod] = useState<Period>("weekly");
   const settings = useSettings();
@@ -71,7 +85,7 @@ export function TierSwitcher({ tiers }: { tiers: SubscriptionTier[] }) {
                 </b>
                 <span>{per}</span>
               </div>
-              <ShardList element="thunder" items={t.features} />
+              <ShardList element="thunder" items={t.features.map(flag)} />
               <BuyButton
                 className={`btn ${t.recommended ? "" : "ghost"}`}
                 item={{
@@ -92,6 +106,13 @@ export function TierSwitcher({ tiers }: { tiers: SubscriptionTier[] }) {
           ))}
         </AnimatePresence>
       </div>
+
+      {list.some((t) => t.features.some((f) => DEPENDS.test(f))) && (
+        <Reveal className="avail">
+          <b aria-hidden="true">*</b>
+          <p>{settings.availability_note}</p>
+        </Reveal>
+      )}
 
       <section className="sec" style={{ marginTop: 110 }} aria-labelledby="cmp-h">
         <div className="head">
@@ -126,7 +147,7 @@ export function TierSwitcher({ tiers }: { tiers: SubscriptionTier[] }) {
               </tr>
               {rows.map((r) => (
                 <tr key={r}>
-                  <td>{r}</td>
+                  <td>{flag(r)}</td>
                   {list.map((t, i) => (
                     <td key={t.id} className={i === recIndex ? "hl" : ""}>
                       {t.compare[r] ?? "—"}

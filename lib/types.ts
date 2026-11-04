@@ -3,7 +3,7 @@
  * When Supabase is wired in, `supabase gen types` output should be assignable to these.
  */
 
-export type Currency = "USD" | "EUR" | "GBP" | "PKR";
+export type Currency = "USD" | "EUR" | "GBP" | "JPY" | "CZK" | "CAD" | "AUD" | "CHF" | "PLN" | "SEK";
 export type Period = "weekly" | "monthly";
 export type Role = "user" | "admin";
 
@@ -163,6 +163,8 @@ export type SiteSettings = {
   maintenance: boolean;
   patreon_enabled: boolean;
   manual_payments_enabled: boolean;
+  /** Footnote under the subscription tiers (shiny / shundo availability). */
+  availability_note: string;
   /** Display-only FX rates from USD. Charges always happen in the item's currency. */
   fx_rates: Record<Currency, number>;
 };
