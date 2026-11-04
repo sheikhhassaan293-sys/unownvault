@@ -50,16 +50,22 @@ export type CheckoutResult = { ok: true; sessionId: string; purchaseUrl: string 
 export async function createCheckout(kind: "subscription" | "service" | "offer" | "custom", id: string, returnUrl: string): Promise<CheckoutResult> {
   if (!LIVE) return { ok: false, error: "demo" };
   const { whopConfigured, createWhopCheckout } = await import("@/lib/payments/whop");
-  if (!whopConfigured()) return { ok: false, error: "Payments aren't switched on yet — message us on Discord to order." };
+  if (!whopConfigured()) {
+    console.warn("[checkout] Whop env vars missing");
+    return { ok: false, error: "Payments aren't switched on yet — message us on Discord to order." };
+  }
   const { db, user } = await currentUser();
   if (!user) return { ok: false, error: "signin" };
   const { data: settings } = await db.from("site_settings").select("maintenance").eq("id", 1).single();
   if (settings?.maintenance) return { ok: false, error: "Checkout is paused for maintenance — try again soon." };
   try {
     const r = await createWhopCheckout(kind, id, user.id, returnUrl);
+    console.info("[checkout] created", { kind, id, session: r.sessionId, hasUrl: !!r.purchaseUrl });
     return { ok: true, sessionId: r.sessionId, purchaseUrl: r.purchaseUrl };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Couldn't start checkout" };
+    const err = e as { message?: string; statusCode?: number; body?: unknown };
+    console.error("[checkout] failed", { kind, id, message: err?.message, status: err?.statusCode, body: JSON.stringify(err?.body ?? null).slice(0, 800) });
+    return { ok: false, error: err?.message ? `Checkout error: ${err.message}` : "Couldn't start checkout" };
   }
 }
 
