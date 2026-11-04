@@ -45,7 +45,7 @@ export function Navbar() {
         <DiscordLink className="btn ghost sm hide-m">Discord</DiscordLink>
         {ready && user ? (
           <Link className="userchip" href="/account">
-            {user.username}
+            {user.username || "Finish sign-up"}
           </Link>
         ) : (
           <Link className="btn sm" href="/signup" style={{ visibility: ready ? "visible" : "hidden" }}>

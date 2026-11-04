@@ -11,6 +11,7 @@
  * `revalidateTag("tiers")` and the live site updates instantly.
  */
 import * as mock from "@/data/content";
+import { LIVE } from "@/lib/supabase/env";
 import type { CustomRequest, Period } from "@/lib/types";
 
 const bySort = <T extends { sort_order: number }>(a: T, b: T) => a.sort_order - b.sort_order;
@@ -43,7 +44,7 @@ export async function getOffers() {
 }
 
 export async function getFaqs() {
-  return [...mock.faqs].sort(bySort);
+  return [...(await getSiteContent()).faqs].sort(bySort);
 }
 
 export const MOCK_NOW = mock.MOCK_NOW;
@@ -76,6 +77,7 @@ export async function submitCustomRequest(input: NewCustomRequest): Promise<Cust
 
 /** Phase 1: the fake signed-in account. Phase 2: queries scoped to auth.uid() via RLS. */
 export async function getDemoAccount() {
+  if (LIVE) return { profile: mock.demo_profile, subscriptions: [], orders: [], custom_requests: [] };
   const tiers = mock.subscription_tiers;
   return {
     profile: mock.demo_profile,
@@ -89,8 +91,9 @@ export async function getTakenUsernames() {
   return mock.taken_usernames;
 }
 
-/** Everything editable from /admin, including hidden rows (pages filter with `visible()`). */
+/** Everything editable from /admin (pages filter hidden rows with `visible()`). */
 export async function getSiteContent() {
+  if (LIVE) return (await import("@/lib/live-content")).liveContent();
   return {
     settings: mock.site_settings,
     tiers: mock.subscription_tiers,

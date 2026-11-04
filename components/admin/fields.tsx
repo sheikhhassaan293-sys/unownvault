@@ -2,6 +2,8 @@
 
 /** Small, plain form controls for the admin panel. Every change saves immediately. */
 import { useState } from "react";
+import { sb } from "@/lib/supabase/browser";
+import { LIVE } from "@/lib/supabase/env";
 
 export type FieldType = "text" | "textarea" | "number" | "bool" | "select" | "lines" | "kv" | "datetime" | "image";
 
@@ -21,7 +23,18 @@ const toLocal = (iso: string) => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 };
 
-/** Shrinks uploads so they fit in browser storage (Phase 2 uploads to Supabase Storage instead). */
+/** Live: shrink, then upload to Supabase Storage and return the public link. */
+async function upload(file: File): Promise<string> {
+  const dataUrl = await shrink(file, 1600);
+  const blob = await (await fetch(dataUrl)).blob();
+  const path = `uploads/${crypto.randomUUID()}.jpg`;
+  const db = sb();
+  const { error } = await db.storage.from("public-images").upload(path, blob, { contentType: "image/jpeg", cacheControl: "31536000" });
+  if (error) throw error;
+  return db.storage.from("public-images").getPublicUrl(path).data.publicUrl;
+}
+
+/** Shrinks uploads so they fit in browser storage (demo) or upload fast (live). */
 function shrink(file: File, max = 1200): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -126,7 +139,9 @@ export function FieldInput<T>({ field, value, onChange, id }: { field: Field<T>;
                   if (!f) return;
                   setBusy(true);
                   try {
-                    onChange(await shrink(f));
+                    onChange(LIVE ? await upload(f) : await shrink(f));
+                  } catch (err) {
+                    alert(`Upload failed: ${err instanceof Error ? err.message : err}`);
                   } finally {
                     setBusy(false);
                   }

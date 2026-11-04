@@ -24,7 +24,9 @@ function DiscordIcon() {
 }
 
 function ProviderButtons({ onPick }: { onPick: (p: DemoUser["provider"]) => void }) {
-  const { patreon_enabled } = useSettings();
+  const { patreon_enabled: patreonSetting } = useSettings();
+  const { live } = useSession();
+  const patreon_enabled = patreonSetting && !live; // Patreon login arrives with the Patreon integration
   return (
     <>
       <button type="button" className="btn discord block" onClick={() => onPick("discord")}>
@@ -42,17 +44,29 @@ function ProviderButtons({ onPick }: { onPick: (p: DemoUser["provider"]) => void
 /* ─────────────────────────── Sign up → trainer name → welcome ─────────────────────────── */
 export function SignupFlow({ taken }: { taken: string[] }) {
   const navigate = useThemedNavigate();
-  const { signIn } = useSession();
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const { signIn, live, user, ready, needsUsername, signUpEmail, signInDiscord, checkUsername, claimUsername } = useSession();
+  const [step, setStep] = useState<1 | "confirm" | 2 | 3>(1);
   const [provider, setProvider] = useState<DemoUser["provider"]>("email");
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [formErr, setFormErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const [name, setName] = useState("");
   const [check, setCheck] = useState<{ state: "idle" | "checking" | "ok" | "bad"; msg: string }>({ state: "idle", msg: "3–20 characters · letters, numbers, underscore" });
   const input = useRef<HTMLInputElement>(null);
 
-  // live availability check (debounced, like the real API call will be)
+  // arriving from Discord / an email link, or signed in without a name yet → straight to step 2
+  useEffect(() => {
+    if (!ready) return;
+    const wantsName = new URLSearchParams(window.location.search).get("step") === "name";
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- route-driven step
+    if (live && user && needsUsername) setStep(2);
+    else if (live && user && !needsUsername && step !== 3) navigate("/account");
+    else if (!live && wantsName) setStep(2);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, live, user, needsUsername]);
+
+  // live availability check (debounced)
   useEffect(() => {
     const v = name.trim();
     const problem = usernameProblem(v);
@@ -61,25 +75,44 @@ export function SignupFlow({ taken }: { taken: string[] }) {
     if (problem) return setCheck({ state: "bad", msg: problem });
     setCheck({ state: "checking", msg: "Checking…" });
     /* eslint-enable react-hooks/set-state-in-effect */
-    const id = setTimeout(() => {
-      if (taken.includes(v.toLowerCase())) setCheck({ state: "bad", msg: `✕ “${v}” is taken` });
-      else setCheck({ state: "ok", msg: `✓ “${v}” is available` });
+    let cancelled = false;
+    const id = setTimeout(async () => {
+      const free = live ? await checkUsername(v) : !taken.includes(v.toLowerCase());
+      if (cancelled) return;
+      setCheck(free ? { state: "ok", msg: `✓ “${v}” is available` } : { state: "bad", msg: `✕ “${v}” is taken` });
     }, 380);
-    return () => clearTimeout(id);
-  }, [name, taken]);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
+  }, [name, taken, live, checkUsername]);
 
   useEffect(() => {
     if (step === 2) setTimeout(() => input.current?.focus(), 300);
   }, [step]);
 
-  const toStep2 = (p: DemoUser["provider"]) => {
+  const pickProvider = async (p: DemoUser["provider"]) => {
+    if (live && p === "discord") {
+      setBusy(true);
+      const r = await signInDiscord("/");
+      if (r.error) setFormErr(r.error);
+      setBusy(false);
+      return;
+    }
     setProvider(p);
     setStep(2);
   };
 
-  const claim = () => {
+  const claim = async () => {
     if (check.state !== "ok") return;
-    signIn({ username: name.trim(), email: provider === "email" ? email : null, provider });
+    if (live) {
+      setBusy(true);
+      const r = await claimUsername(name.trim());
+      setBusy(false);
+      if (r.error) return setCheck({ state: "bad", msg: r.error });
+    } else {
+      signIn({ username: name.trim(), email: provider === "email" ? email : null, provider });
+    }
     setStep(3);
   };
 
@@ -95,17 +128,22 @@ export function SignupFlow({ taken }: { taken: string[] }) {
                 Track orders, manage your plan and get quotes on custom requests.
               </p>
               <div className="stack">
-                <ProviderButtons onPick={toStep2} />
+                <ProviderButtons onPick={pickProvider} />
                 <div className="or">OR</div>
                 <form
                   className="stack"
                   noValidate
-                  onSubmit={(e) => {
+                  onSubmit={async (e) => {
                     e.preventDefault();
                     if (!/^\S+@\S+\.\S+$/.test(email)) return setFormErr("Enter a valid email");
                     if (pw.length < 8) return setFormErr("Password needs 8+ characters");
                     setFormErr(null);
-                    toStep2("email");
+                    if (!live) return pickProvider("email");
+                    setBusy(true);
+                    const r = await signUpEmail(email, pw);
+                    setBusy(false);
+                    if (r.error) return setFormErr(r.error);
+                    setStep(r.needsConfirm ? "confirm" : 2);
                   }}
                 >
                   <div className="f">
@@ -117,8 +155,8 @@ export function SignupFlow({ taken }: { taken: string[] }) {
                     <input id="su-pw" type="password" autoComplete="new-password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="8+ characters" />
                   </div>
                   {formErr && <span className="ustat bad">{formErr}</span>}
-                  <button className="btn block" type="submit">
-                    Create account
+                  <button className="btn block" type="submit" disabled={busy}>
+                    {busy ? "Creating…" : "Create account"}
                   </button>
                 </form>
                 <p className="mono dim" style={{ fontSize: 12, textAlign: "center", marginTop: 6 }}>
@@ -128,6 +166,16 @@ export function SignupFlow({ taken }: { taken: string[] }) {
                   </Link>
                 </p>
               </div>
+            </motion.div>
+          )}
+
+          {step === "confirm" && (
+            <motion.div key="sc" {...pane}>
+              <div className="label">Almost there</div>
+              <h1 className="h2">Check your email</h1>
+              <p className="muted">
+                We sent a link to <b className="acc">{email}</b>. Tap it to confirm your account — you&apos;ll come straight back here to pick your trainer name.
+              </p>
             </motion.div>
           )}
 
@@ -164,8 +212,8 @@ export function SignupFlow({ taken }: { taken: string[] }) {
                 <div id="su-name-status" className={`ustat ${check.state === "ok" ? "good" : check.state === "bad" ? "bad" : ""}`} aria-live="polite">
                   {check.msg}
                 </div>
-                <button className="btn block" type="submit" disabled={check.state !== "ok"}>
-                  Claim name
+                <button className="btn block" type="submit" disabled={check.state !== "ok" || busy}>
+                  {busy ? "Claiming…" : "Claim name"}
                 </button>
               </form>
             </motion.div>
@@ -222,19 +270,34 @@ function WelcomeBars() {
 /* ─────────────────────────── Log in ─────────────────────────── */
 export function LoginForm() {
   const navigate = useThemedNavigate();
-  const { signIn } = useSession();
+  const { signIn, live, signInEmail, signInDiscord } = useSession();
   const [email, setEmail] = useState("");
+  const [pw, setPw] = useState("");
   const [err, setErr] = useState<string | null>(null);
-  const go = (provider: DemoUser["provider"]) => {
-    signIn({ username: "NightHunter_7", email: provider === "email" ? email : null, provider });
-    navigate("/account");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- error passed back from the login link
+    if (new URLSearchParams(window.location.search).get("error")) setErr("That link expired or was already used — log in again.");
+  }, []);
+
+  const go = async (provider: DemoUser["provider"]) => {
+    if (!live) {
+      signIn({ username: "NightHunter_7", email: provider === "email" ? email : null, provider });
+      return navigate("/account");
+    }
+    setBusy(true);
+    const r = provider === "discord" ? await signInDiscord("/account") : await signInEmail(email, pw);
+    setBusy(false);
+    if (r.error) return setErr(r.error);
+    if (provider === "email") navigate("/account");
   };
   return (
     <div className="panel auth-card">
       <div className="label">Welcome back</div>
       <h1 className="h2">Log in</h1>
       <p className="muted" style={{ marginBottom: 24 }}>
-        Demo: any details work — you&apos;ll be signed in as a sample trainer.
+        {live ? "Good to see you again." : "Demo: any details work — you'll be signed in as a sample trainer."}
       </p>
       <div className="stack">
         <ProviderButtons onPick={go} />
@@ -245,6 +308,7 @@ export function LoginForm() {
           onSubmit={(e) => {
             e.preventDefault();
             if (!/^\S+@\S+\.\S+$/.test(email)) return setErr("Enter a valid email");
+            if (live && !pw) return setErr("Enter your password");
             go("email");
           }}
         >
@@ -254,11 +318,11 @@ export function LoginForm() {
           </div>
           <div className="f">
             <label htmlFor="li-pw">Password</label>
-            <input id="li-pw" type="password" autoComplete="current-password" placeholder="••••••••" />
+            <input id="li-pw" type="password" autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="••••••••" />
           </div>
           {err && <span className="ustat bad">{err}</span>}
-          <button className="btn block" type="submit">
-            Log in
+          <button className="btn block" type="submit" disabled={busy}>
+            {busy ? "Logging in…" : "Log in"}
           </button>
         </form>
         <p className="mono dim" style={{ fontSize: 12, textAlign: "center", marginTop: 6 }}>

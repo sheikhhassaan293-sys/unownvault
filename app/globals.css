@@ -344,6 +344,7 @@
   .paychips span { font-family: var(--fm); font-size: 11px; letter-spacing: 0.08em; border: 1px solid rgba(var(--rgb), 0.3); padding: 6px 9px; border-radius: 3px; color: var(--muted); }
   .embed { border: 1px dashed rgba(var(--rgb), 0.45); border-radius: 4px; padding: 22px; display: grid; gap: 12px; font-family: var(--fm); font-size: 12px; color: var(--muted); line-height: 1.6; }
   .embed .fake { height: 44px; border-radius: 4px; background: rgba(var(--text-rgb), 0.06); border: 1px solid rgba(var(--text-rgb), 0.1); display: flex; align-items: center; padding: 0 12px; color: var(--dim); }
+  .whop-embed { min-height: 420px; margin: 0 -10px; }
   .alt-pay { display: flex; justify-content: center; gap: 18px; margin-top: 16px; flex-wrap: wrap; }
   .instructions { white-space: pre-line; font-family: var(--fm); font-size: 13px; line-height: 1.7; padding: 14px; border: 1px solid var(--line); border-radius: 4px; color: var(--text); background: rgba(0, 0, 0, 0.25); margin-bottom: 16px; }
 

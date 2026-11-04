@@ -14,7 +14,7 @@ type Sub = UserSubscription & { tier: SubscriptionTier | null };
 const fmt = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
 export function AccountView({ subs }: { subs: Sub[] }) {
-  const { user, ready, signOut, orders, requests, updateOrder } = useSession();
+  const { user, ready, signOut, orders, requests, markReceived, live, subscriptions } = useSession();
   const { patreon_enabled } = useSettings();
   const toast = useToast();
   const navigate = useThemedNavigate();
@@ -43,7 +43,7 @@ export function AccountView({ subs }: { subs: Sub[] }) {
     );
   }
 
-  const active = subs.find((s) => s.status === "active");
+  const active = (live ? subscriptions : subs).find((s) => s.status === "active");
   const allRequests = requests;
 
   return (
@@ -58,8 +58,7 @@ export function AccountView({ subs }: { subs: Sub[] }) {
           <button
             className="btn ghost sm"
             onClick={() => {
-              signOut();
-              navigate("/");
+              signOut().then(() => navigate("/"));
             }}
           >
             Sign out
@@ -102,7 +101,14 @@ export function AccountView({ subs }: { subs: Sub[] }) {
                 </div>
               </div>
               <div className="stack" style={{ marginTop: 20 }}>
-                <button className="btn ghost block" onClick={() => toast("Demo: opens your Whop billing portal")}>
+                <button
+                  className="btn ghost block"
+                  onClick={() => {
+                    const url = (active as { manage_url?: string | null }).manage_url;
+                    if (live && url) window.open(url, "_blank", "noopener");
+                    else toast(live ? "Message us on Discord to change this plan" : "Demo: opens your Whop billing portal");
+                  }}
+                >
                   Manage or cancel
                 </button>
               </div>
@@ -162,8 +168,7 @@ export function AccountView({ subs }: { subs: Sub[] }) {
                             className="linkish"
                             onClick={() => {
                               if (confirm(`Mark ${o.item_name} as received? Only do this once it's been delivered.`)) {
-                                updateOrder(o.id, { status: "completed" });
-                                toast("Marked as received — thanks!");
+                                markReceived(o.id).then((r) => toast(r.error ? `Couldn't update: ${r.error}` : "Marked as received — thanks!"));
                               }
                             }}
                           >

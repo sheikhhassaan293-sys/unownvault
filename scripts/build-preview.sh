@@ -4,9 +4,18 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 STASH=$(mktemp -d)
-restore() { (cd "$STASH" && find . -type f) | while read -r f; do mkdir -p "app/$(dirname "$f")"; mv "$STASH/$f" "app/$f"; done; rm -rf "$STASH"; }
+restore() {
+  [ -f "$STASH/_root/actions.ts.bak" ] && mv "$STASH/_root/actions.ts.bak" app/actions.ts
+  [ -f "$STASH/_root/live-content.ts.bak" ] && mv "$STASH/_root/live-content.ts.bak" lib/live-content.ts
+  if [ -d "$STASH/_root" ]; then (cd "$STASH/_root" && find . -type f) | while read -r f; do mkdir -p "$(dirname "$f")"; mv "$STASH/_root/$f" "$f"; done; rm -rf "$STASH/_root"; fi
+  (cd "$STASH" && find . -type f) | while read -r f; do mkdir -p "app/$(dirname "$f")"; mv "$STASH/$f" "app/$f"; done; rm -rf "$STASH"
+}
 trap restore EXIT
 (cd app && find . -name 'opengraph-image.tsx' -o -name 'twitter-image.tsx' -o -name 'manifest.ts' -o -name 'robots.ts' -o -name 'sitemap.ts') | while read -r f; do mkdir -p "$STASH/$(dirname "$f")"; mv "app/$f" "$STASH/$f"; done
+# no server in a static preview: set aside route handlers + proxy, swap server actions for no-ops
+for f in proxy.ts app/auth app/api; do [ -e "$f" ] && mkdir -p "$STASH/_root/$(dirname "$f")" && mv "$f" "$STASH/_root/$f"; done
+cp app/actions.ts "$STASH/_root/actions.ts.bak" && cp scripts/actions-demo-stub.ts app/actions.ts
+cp lib/live-content.ts "$STASH/_root/live-content.ts.bak" && cp scripts/live-content-demo-stub.ts lib/live-content.ts
 rm -rf out preview
 NEXT_PUBLIC_STATIC_EXPORT=1 npx next build
 mv out preview

@@ -2,7 +2,6 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { submitCustomRequest } from "@/lib/data";
 import type { CustomRequest } from "@/lib/types";
 import { BuyButton } from "../providers/Checkout";
 import { Price } from "../providers/Currency";
@@ -15,7 +14,8 @@ export const REQUEST_TYPES = ["Shundo hunt", "Shiny hunt", "Stardust", "XP / lev
 type Errors = Partial<Record<"target" | "details" | "budget" | "discord", string>>;
 
 export function RequestForm() {
-  const { user, addRequest } = useSession();
+  const { user, sendRequest } = useSession();
+  const [sendError, setSendError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<CustomRequest | null>(null);
   const [errors, setErrors] = useState<Errors>({});
@@ -45,7 +45,10 @@ export function RequestForm() {
       return;
     }
     setBusy(true);
-    const req = await submitCustomRequest({
+    setSendError(null);
+    let req: CustomRequest;
+    try {
+      req = await sendRequest({
       request_type: v("type"),
       target: v("target"),
       details: v("details"),
@@ -53,10 +56,14 @@ export function RequestForm() {
       deadline: v("deadline") || null,
       discord_username: v("discord"),
       image: file,
-    });
+      });
+    } catch (e) {
+      setBusy(false);
+      setSendError(e instanceof Error ? e.message : "Something went wrong — try again");
+      return;
+    }
     setBusy(false);
     setDone(req);
-    addRequest(req);
   }
 
   const err = (k: keyof Errors) =>
@@ -136,6 +143,7 @@ export function RequestForm() {
             </label>
           </div>
           <div className="f full">
+            {sendError && <span className="err">Couldn&apos;t send: {sendError}</span>}
             <button className="btn block" type="submit" disabled={busy}>
               {busy ? "Sending…" : "Send request"}
             </button>

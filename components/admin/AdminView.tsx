@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { sb } from "@/lib/supabase/browser";
+import { LIVE } from "@/lib/supabase/env";
 import { COPY_FIELDS } from "@/lib/copy";
 import type { Currency, CustomRequest, Faq, Offer, Order, Service, SiteSettings, SubscriptionTier } from "@/lib/types";
 import { DISPLAY_CURRENCIES } from "../providers/Currency";
@@ -115,12 +117,51 @@ const faqFields: Field<Faq>[] = [
   { key: "answer", label: "Answer", type: "textarea" },
 ];
 
+/** Live: every row, including hidden ones (admin RLS). */
+async function loadAllContent(): Promise<SiteContent> {
+  const db = sb();
+  const [settings, tiers, categories, services, offers, faqs] = await Promise.all([
+    db.from("site_settings").select("*").eq("id", 1).single(),
+    db.from("subscription_tiers").select("*").order("sort_order"),
+    db.from("service_categories").select("slug,label,sort_order").order("sort_order"),
+    db.from("services").select("*").order("sort_order"),
+    db.from("offers").select("*").order("starts_at", { ascending: false }),
+    db.from("faqs").select("*").order("sort_order"),
+  ]);
+  const err = [settings, tiers, categories, services, offers, faqs].find((r) => r.error)?.error;
+  if (err) throw new Error(err.message);
+  return {
+    settings: settings.data as SiteSettings,
+    tiers: tiers.data as SubscriptionTier[],
+    categories: categories.data as SiteContent["categories"],
+    services: services.data as Service[],
+    offers: offers.data as Offer[],
+    faqs: faqs.data as Faq[],
+  };
+}
+
 /* ───────────── view ───────────── */
 
 export function AdminView() {
-  const { content, save, reset, edited, ready } = useContent();
+  const { content, save, reset, edited, ready, hydrate, saveState, saveError } = useContent();
+  const { live, isAdmin, ready: sessionReady, user } = useSession();
+  const [loadedFull, setLoadedFull] = useState(!LIVE);
   const { orders, updateOrder, requests, updateRequest } = useSession();
   const toast = useToast();
+
+  // live: admins load every row, including hidden plans/services and unpublished offers
+  useEffect(() => {
+    if (!LIVE || !isAdmin) return;
+    loadAllContent()
+      .then((full) => {
+        // any text box the database doesn't have yet keeps its default
+        const d = content.settings;
+        hydrate({ ...full, settings: { ...d, ...full.settings, copy: { ...d.copy, ...(full.settings.copy ?? {}) }, fx_rates: { ...d.fx_rates, ...(full.settings.fx_rates ?? {}) } } });
+        setLoadedFull(true);
+      })
+      .catch((e) => toast(`Couldn't load content: ${e.message}`));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once per admin session
+  }, [isAdmin, hydrate, toast]);
   const [tab, setTab] = useState<Tab>("Site & text");
   const [savedAt, setSavedAt] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -146,7 +187,26 @@ export function AdminView() {
   const set = <K extends keyof SiteContent>(k: K, v: SiteContent[K]) => commit({ ...content, [k]: v });
   const setSetting = (k: keyof SiteSettings, v: unknown) => set("settings", { ...content.settings, [k]: v } as SiteSettings);
 
-  if (!ready) return <div style={{ minHeight: "70vh" }} />;
+  if (!ready || !sessionReady) return <div style={{ minHeight: "70vh" }} />;
+  if (live && !isAdmin) {
+    return (
+      <div className="auth-wrap" style={{ minHeight: "70vh" }}>
+        <div className="panel auth-card">
+          <div className="label">Admin</div>
+          <h1 className="h2">Admins only</h1>
+          <p className="muted" style={{ marginBottom: 24 }}>
+            {user ? "This account doesn't have admin access." : "Log in with the owner account to manage the site."}
+          </p>
+          {!user && (
+            <Link className="btn block" href="/login">
+              Log in
+            </Link>
+          )}
+        </div>
+      </div>
+    );
+  }
+  if (!loadedFull) return <div style={{ minHeight: "70vh" }} aria-busy="true" />;
 
   return (
     <div className="page admin">
@@ -155,13 +215,23 @@ export function AdminView() {
         <div className="head-row">
           <h1 className="h2">Run the vault.</h1>
           <span className="mono dim" style={{ fontSize: 12 }} aria-live="polite">
-            {savedAt ? "✓ Saved — live on the site" : "Changes save as you type"}
+            {saveState === "saving"
+              ? "Saving…"
+              : saveState === "error"
+                ? `⚠ Not saved: ${saveError}`
+                : savedAt || saveState === "saved"
+                  ? live
+                    ? "✓ Saved — live for everyone"
+                    : "✓ Saved in this browser"
+                  : "Changes save as you type"}
           </span>
         </div>
+        {!live && (
         <p className="demo-note">
           <b>Demo:</b> edits are saved in this browser only, so other people won&apos;t see them yet. Once the database is connected (Phase 2), this page is locked to
           your admin login and every change goes live for all visitors.
         </p>
+        )}
       </div>
 
       <nav className="atabs" aria-label="Admin sections">
@@ -381,6 +451,7 @@ export function AdminView() {
                 e.target.value = "";
               }}
             />
+            {!live && (
             <button
               className="btn ghost"
               disabled={!edited}
@@ -394,6 +465,7 @@ export function AdminView() {
             >
               Reset to original content
             </button>
+            )}
           </div>
         </section>
       )}
@@ -505,6 +577,20 @@ function OrdersAdmin({ orders, onStatus }: { orders: Order[]; onStatus: (id: str
                       <>
                         <br />
                         <small className="mono dim">Txn: {o.transaction_ref}</small>
+                      </>
+                    )}
+                    {o.proof_url && LIVE && (
+                      <>
+                        <br />
+                        <button
+                          className="linkish"
+                          onClick={async () => {
+                            const { data } = await sb().storage.from("request-images").createSignedUrl(o.proof_url!, 600);
+                            if (data?.signedUrl) window.open(data.signedUrl, "_blank", "noopener");
+                          }}
+                        >
+                          View payment screenshot
+                        </button>
                       </>
                     )}
                   </td>

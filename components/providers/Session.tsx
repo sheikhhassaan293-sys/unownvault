@@ -1,28 +1,53 @@
 "use client";
 
 /**
- * MOCK SESSION (Phase 1). Stores a fake signed-in user, their orders and custom requests
- * in localStorage so the whole flow can be clicked through:
- *   sign up → pay → "pending delivery" → mark as received; request → admin quote → pay.
- * Phase 2 replaces this with Supabase auth + the orders / custom_requests tables
- * (same function names, so pages don't change).
+ * Accounts, orders and custom requests.
+ *
+ * Demo mode (no Supabase keys): a fake user, orders and requests in localStorage.
+ * Live mode: Supabase auth (email + Discord), data from the database; row-level security
+ * means each person only ever loads their own rows (admins load everyone's).
+ * Both modes expose the same functions, so pages don't care which one is running.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import type { CustomRequest, Order } from "@/lib/types";
+import { syncAdminRole } from "@/app/actions";
+import { sb } from "@/lib/supabase/browser";
+import { LIVE } from "@/lib/supabase/env";
+import type { CustomRequest, Order, SubscriptionTier, UserSubscription } from "@/lib/types";
 
-export type DemoUser = { username: string; email: string | null; provider: "email" | "discord" | "patreon" };
+export type DemoUser = {
+  id?: string;
+  username: string;
+  email: string | null;
+  provider: "email" | "discord" | "patreon";
+  role?: "user" | "admin";
+};
+export type Sub = UserSubscription & { tier: SubscriptionTier | null };
+export type NewRequest = Pick<CustomRequest, "request_type" | "target" | "details" | "budget" | "deadline" | "discord_username"> & { image?: File | null };
+type Result = { error?: string; needsConfirm?: boolean };
 
 type Ctx = {
+  live: boolean;
   user: DemoUser | null;
+  /** live: signed in but hasn't picked a trainer name yet */
+  needsUsername: boolean;
   ready: boolean;
-  signIn: (u: DemoUser) => void;
-  signOut: () => void;
+  isAdmin: boolean;
+  signIn: (u: DemoUser) => void; // demo only
+  signUpEmail: (email: string, password: string) => Promise<Result>;
+  signInEmail: (email: string, password: string) => Promise<Result>;
+  signInDiscord: (next?: string) => Promise<Result>;
+  checkUsername: (name: string) => Promise<boolean>;
+  claimUsername: (name: string) => Promise<Result>;
+  signOut: () => Promise<void>;
+  subscriptions: Sub[];
   orders: Order[];
-  addOrder: (o: Order) => void;
-  updateOrder: (id: string, patch: Partial<Order>) => void;
+  addOrder: (o: Order) => void; // demo checkout only — live orders come from payment webhooks
+  updateOrder: (id: string, patch: Partial<Order>) => Promise<void>;
+  markReceived: (id: string) => Promise<Result>;
   requests: CustomRequest[];
-  addRequest: (r: CustomRequest) => void;
-  updateRequest: (id: string, patch: Partial<CustomRequest>) => void;
+  sendRequest: (r: NewRequest) => Promise<CustomRequest>;
+  updateRequest: (id: string, patch: Partial<CustomRequest>) => Promise<void>;
+  reload: () => Promise<void>;
 };
 
 const KEY = "uv-demo-session";
@@ -43,41 +68,128 @@ function store(key: string, v: unknown) {
     localStorage.setItem(key, JSON.stringify(v));
   } catch {}
 }
+const callbackUrl = (next = "/") => `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+const friendly = (msg: string) =>
+  /invalid login/i.test(msg)
+    ? "Wrong email or password"
+    : /already registered/i.test(msg)
+      ? "That email already has an account — log in instead"
+      : /rate limit/i.test(msg)
+        ? "Too many tries — wait a minute and try again"
+        : msg;
 
-export function SessionProvider({
-  demoOrders,
-  demoRequests,
-  children,
-}: {
-  demoOrders: Order[];
-  demoRequests: CustomRequest[];
-  children: React.ReactNode;
-}) {
+export const newId = () => "UV-" + Math.random().toString(36).slice(2, 7).toUpperCase();
+
+export function SessionProvider({ demoOrders, demoRequests, children }: { demoOrders: Order[]; demoRequests: CustomRequest[]; children: React.ReactNode }) {
   const [user, setUser] = useState<DemoUser | null>(null);
-  const [orders, setOrders] = useState<Order[]>(demoOrders);
-  const [requests, setRequests] = useState<CustomRequest[]>(demoRequests);
+  const [needsUsername, setNeedsUsername] = useState(false);
+  const [orders, setOrders] = useState<Order[]>(LIVE ? [] : demoOrders);
+  const [requests, setRequests] = useState<CustomRequest[]>(LIVE ? [] : demoRequests);
+  const [subscriptions, setSubs] = useState<Sub[]>([]);
   const [ready, setReady] = useState(false);
 
-  useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect -- hydrate mock session from storage */
-    setUser(load<DemoUser | null>(KEY, null));
-    setOrders(load(ORD_KEY, demoOrders));
-    setRequests(load(REQ_KEY, demoRequests));
-    setReady(true);
-    /* eslint-enable react-hooks/set-state-in-effect */
-  }, [demoOrders, demoRequests]);
+  /* ───────────── live: load profile + own data ───────────── */
+  const loadLive = useCallback(async () => {
+    const db = sb();
+    const { data: auth } = await db.auth.getUser();
+    const u = auth.user;
+    if (!u) {
+      setUser(null);
+      setNeedsUsername(false);
+      setOrders([]);
+      setRequests([]);
+      setSubs([]);
+      return;
+    }
+    const role = (await syncAdminRole().catch(() => null)) ?? "user";
+    const { data: profile } = await db.from("profiles").select("username, role").eq("id", u.id).single();
+    const provider = (u.app_metadata?.provider as DemoUser["provider"]) ?? "email";
+    setUser({ id: u.id, username: profile?.username ?? "", email: u.email ?? null, provider, role: (profile?.role as "admin" | "user") ?? role });
+    setNeedsUsername(!profile?.username);
+    const [o, r, s] = await Promise.all([
+      db.from("orders").select("*").order("created_at", { ascending: false }).limit(200),
+      db.from("custom_requests").select("*").order("created_at", { ascending: false }).limit(200),
+      db.from("subscriptions").select("*, tier:subscription_tiers(*)").eq("user_id", u.id).order("starts_at", { ascending: false }),
+    ]);
+    setOrders((o.data ?? []) as Order[]);
+    setRequests((r.data ?? []) as CustomRequest[]);
+    setSubs((s.data ?? []) as Sub[]);
+  }, []);
 
+  useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- hydrate session after mount */
+    if (!LIVE) {
+      setUser(load<DemoUser | null>(KEY, null));
+      setOrders(load(ORD_KEY, demoOrders));
+      setRequests(load(REQ_KEY, demoRequests));
+      setReady(true);
+      return;
+    }
+    /* eslint-enable react-hooks/set-state-in-effect */
+    loadLive().finally(() => setReady(true));
+    const { data } = sb().auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") loadLive();
+    });
+    return () => data.subscription.unsubscribe();
+  }, [demoOrders, demoRequests, loadLive]);
+
+  /* ───────────── auth ───────────── */
   const signIn = useCallback((u: DemoUser) => {
     setUser(u);
     store(KEY, u);
   }, []);
-  const signOut = useCallback(() => {
+
+  const signUpEmail = useCallback(async (email: string, password: string): Promise<Result> => {
+    if (!LIVE) return {};
+    const { data, error } = await sb().auth.signUp({ email, password, options: { emailRedirectTo: callbackUrl("/signup?step=name") } });
+    if (error) return { error: friendly(error.message) };
+    return { needsConfirm: !data.session };
+  }, []);
+
+  const signInEmail = useCallback(async (email: string, password: string): Promise<Result> => {
+    if (!LIVE) return {};
+    const { error } = await sb().auth.signInWithPassword({ email, password });
+    if (error) return { error: friendly(error.message) };
+    await loadLive();
+    return {};
+  }, [loadLive]);
+
+  const signInDiscord = useCallback(async (next = "/"): Promise<Result> => {
+    if (!LIVE) return {};
+    const { error } = await sb().auth.signInWithOAuth({ provider: "discord", options: { redirectTo: callbackUrl(next), scopes: "identify email" } });
+    return error ? { error: friendly(error.message) } : {};
+  }, []);
+
+  const checkUsername = useCallback(async (name: string) => {
+    if (!LIVE) return true;
+    const { data, error } = await sb().rpc("username_available", { name });
+    return !error && data === true;
+  }, []);
+
+  const claimUsername = useCallback(
+    async (name: string): Promise<Result> => {
+      if (!LIVE) return {};
+      const db = sb();
+      const { data: auth } = await db.auth.getUser();
+      if (!auth.user) return { error: "Please sign in again" };
+      const { error } = await db.from("profiles").update({ username: name }).eq("id", auth.user.id);
+      if (error) return { error: /duplicate|unique/i.test(error.message) ? "Someone just took that name — try another" : error.message };
+      await loadLive();
+      return {};
+    },
+    [loadLive],
+  );
+
+  const signOut = useCallback(async () => {
+    if (LIVE) await sb().auth.signOut();
     setUser(null);
+    setNeedsUsername(false);
     try {
       localStorage.removeItem(KEY);
     } catch {}
   }, []);
 
+  /* ───────────── orders ───────────── */
   const addOrder = useCallback((o: Order) => {
     setOrders((prev) => {
       const next = [o, ...prev];
@@ -85,31 +197,120 @@ export function SessionProvider({
       return next;
     });
   }, []);
-  const updateOrder = useCallback((id: string, patch: Partial<Order>) => {
+
+  const updateOrder = useCallback(async (id: string, patch: Partial<Order>) => {
     setOrders((prev) => {
       const next = prev.map((o) => (o.id === id ? { ...o, ...patch } : o));
-      store(ORD_KEY, next);
+      if (!LIVE) store(ORD_KEY, next);
       return next;
     });
-  }, []);
-  const addRequest = useCallback((r: CustomRequest) => {
-    setRequests((prev) => {
-      const next = [r, ...prev];
-      store(REQ_KEY, next);
-      return next;
-    });
-  }, []);
-  const updateRequest = useCallback((id: string, patch: Partial<CustomRequest>) => {
-    setRequests((prev) => {
-      const next = prev.map((r) => (r.id === id ? { ...r, ...patch } : r));
-      store(REQ_KEY, next);
-      return next;
-    });
+    if (LIVE) {
+      const { error } = await sb().from("orders").update(patch).eq("id", id);
+      if (error) alert(`Couldn't update the order: ${error.message}`);
+    }
   }, []);
 
-  const value = useMemo(
-    () => ({ user, ready, signIn, signOut, orders, addOrder, updateOrder, requests, addRequest, updateRequest }),
-    [user, ready, signIn, signOut, orders, addOrder, updateOrder, requests, addRequest, updateRequest],
+  const markReceived = useCallback(
+    async (id: string): Promise<Result> => {
+      if (LIVE) {
+        const { error } = await sb().rpc("mark_order_received", { order_id: id });
+        if (error) return { error: error.message };
+      }
+      setOrders((prev) => {
+        const next = prev.map((o) => (o.id === id ? { ...o, status: "completed" as const } : o));
+        if (!LIVE) store(ORD_KEY, next);
+        return next;
+      });
+      return {};
+    },
+    [],
+  );
+
+  /* ───────────── custom requests ───────────── */
+  const sendRequest = useCallback(async (r: NewRequest): Promise<CustomRequest> => {
+    const base: CustomRequest = {
+      id: newId(),
+      user_id: null,
+      request_type: r.request_type,
+      target: r.target,
+      details: r.details,
+      budget: r.budget,
+      deadline: r.deadline,
+      discord_username: r.discord_username,
+      image_url: null,
+      status: "new",
+      quote_amount: null,
+      admin_reply: null,
+      created_at: new Date().toISOString(),
+    };
+    if (!LIVE) {
+      await new Promise((res) => setTimeout(res, 500));
+      setRequests((prev) => {
+        const next = [base, ...prev];
+        store(REQ_KEY, next);
+        return next;
+      });
+      return base;
+    }
+    const db = sb();
+    let image_url: string | null = null;
+    if (r.image) {
+      const path = `${crypto.randomUUID()}.${(r.image.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "")}`;
+      const up = await db.storage.from("request-images").upload(path, r.image, { contentType: r.image.type });
+      if (!up.error) image_url = path;
+    }
+    const { data, error } = await db.rpc("submit_custom_request", {
+      p_type: r.request_type,
+      p_target: r.target,
+      p_details: r.details,
+      p_budget: r.budget,
+      p_deadline: r.deadline,
+      p_discord: r.discord_username,
+      p_image_url: image_url,
+    });
+    if (error) throw new Error(error.message);
+    const saved = { ...base, id: data as string, image_url };
+    setRequests((prev) => [saved, ...prev]);
+    return saved;
+  }, []);
+
+  const updateRequest = useCallback(async (id: string, patch: Partial<CustomRequest>) => {
+    setRequests((prev) => {
+      const next = prev.map((r) => (r.id === id ? { ...r, ...patch } : r));
+      if (!LIVE) store(REQ_KEY, next);
+      return next;
+    });
+    if (LIVE) {
+      const { error } = await sb().from("custom_requests").update(patch).eq("id", id);
+      if (error) alert(`Couldn't update the request: ${error.message}`);
+    }
+  }, []);
+
+  const value = useMemo<Ctx>(
+    () => ({
+      live: LIVE,
+      user,
+      needsUsername,
+      ready,
+      isAdmin: LIVE ? user?.role === "admin" : true,
+      signIn,
+      signUpEmail,
+      signInEmail,
+      signInDiscord,
+      checkUsername,
+      claimUsername,
+      signOut,
+      subscriptions,
+      orders,
+      addOrder,
+      updateOrder,
+      markReceived,
+      requests,
+      sendRequest,
+      updateRequest,
+      reload: LIVE ? loadLive : async () => {},
+    }),
+    [user, needsUsername, ready, signIn, signUpEmail, signInEmail, signInDiscord, checkUsername, claimUsername, signOut, subscriptions, orders, addOrder, updateOrder, markReceived, requests, sendRequest, updateRequest, loadLive],
   );
   return <SessionCtx.Provider value={value}>{children}</SessionCtx.Provider>;
 }
@@ -129,5 +330,3 @@ export const ORDER_STATUS: Record<Order["status"], string> = {
   refunded: "Refunded",
   disputed: "Disputed",
 };
-
-export const newId = () => "UV-" + Math.random().toString(36).slice(2, 7).toUpperCase();

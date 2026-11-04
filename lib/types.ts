@@ -114,8 +114,10 @@ export type UserSubscription = {
   starts_at: string;
   ends_at: string;
   status: "active" | "cancelled" | "expired" | "past_due";
-  /** true when the provider will auto-renew (Whop / Patreon). (derived in Phase 2) */
+  /** true when the provider will auto-renew (Whop / Patreon). */
   renews: boolean;
+  /** Whop's page where the buyer manages / cancels. */
+  manage_url?: string | null;
 };
 
 export type CustomRequestStatus =

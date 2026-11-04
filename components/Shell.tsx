@@ -9,10 +9,10 @@ import { Background } from "./background/Background";
 import { Footer, Navbar, TabBar } from "./Chrome";
 import { CheckoutProvider } from "./providers/Checkout";
 import { CurrencyProvider } from "./providers/Currency";
-import { SessionProvider } from "./providers/Session";
+import { SessionProvider, useSession } from "./providers/Session";
 import { SettingsProvider, useSettings, type SiteContent } from "./providers/Settings";
 import { ToastProvider } from "./providers/Toast";
-import { TransitionProvider } from "./providers/Transition";
+import { TransitionProvider, useThemedNavigate } from "./providers/Transition";
 
 /** App frame: theme tokens from the URL, animated background, nav, footer, global providers. */
 export function Shell({
@@ -75,6 +75,7 @@ export function Shell({
                       Skip to content
                     </a>
                     <MaintenanceBar />
+                    <UsernameGate />
                     <Navbar />
                     <main id="main" ref={main} style={{ position: "relative", zIndex: 5 }}>
                       {children}
@@ -100,4 +101,15 @@ function MaintenanceBar() {
       Maintenance in progress — checkout is paused for a bit. Browse away, we&apos;ll be right back.
     </div>
   );
+}
+
+/** Live: someone signed in (e.g. with Discord) but hasn't picked a trainer name → send them to pick one. */
+function UsernameGate() {
+  const { live, ready, user, needsUsername } = useSession();
+  const navigate = useThemedNavigate();
+  const path = usePathname();
+  useEffect(() => {
+    if (live && ready && user && needsUsername && path !== "/signup") navigate("/signup?step=name");
+  }, [live, ready, user, needsUsername, path, navigate]);
+  return null;
 }

@@ -10,10 +10,14 @@ const eslintConfig = defineConfig([
     // Default ignores of eslint-config-next:
     ".next/**",
     "out/**",
+    "scripts/actions-demo-stub.ts",
+    "scripts/live-content-demo-stub.ts",
     "build/**",
     "next-env.d.ts",
     "preview/**",
     "out/**",
+    "scripts/actions-demo-stub.ts",
+    "scripts/live-content-demo-stub.ts",
   ]),
 ]);
 

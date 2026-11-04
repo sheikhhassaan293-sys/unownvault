@@ -13,8 +13,17 @@ import { useSettings } from "./Settings";
 import { newId, useSession } from "./Session";
 import { useToast } from "./Toast";
 import { useThemedNavigate } from "./Transition";
+import dynamic from "next/dynamic";
+import { confirmCheckout, createCheckout } from "@/app/actions";
+import { sb } from "@/lib/supabase/browser";
 
-type Step = "summary" | "whop" | "manual" | "manual-done" | "success";
+// Whop's embedded checkout (an iframe) — only loaded when someone actually pays
+const WhopCheckoutEmbed = dynamic(() => import("@whop/checkout/react").then((m) => m.WhopCheckoutEmbed), {
+  ssr: false,
+  loading: () => <div className="embed">Loading secure checkout…</div>,
+});
+
+type Step = "summary" | "whop" | "manual" | "manual-done" | "success" | "signin";
 const CheckoutCtx = createContext<(item: CheckoutItem) => void>(() => {});
 export const useCheckout = () => useContext(CheckoutCtx);
 
@@ -53,7 +62,50 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
   const [txn, setTxn] = useState("");
   const [proof, setProof] = useState<File | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
-  const { user, addOrder, updateRequest } = useSession();
+  const { user, addOrder, updateRequest, live, reload } = useSession();
+  const [session, setSession] = useState<{ id: string; url: string | null } | null>(null);
+  const [starting, setStarting] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
+
+  /** Live: ask the server for a Whop checkout for this item, then show it inside the dialog. */
+  async function startWhop() {
+    if (!live) return setStep("whop");
+    if (!user) return setStep("signin");
+    setStarting(true);
+    setPayError(null);
+    const r = await createCheckout(item.kind, item.id, window.location.href);
+    setStarting(false);
+    if (!r.ok) return r.error === "signin" ? setStep("signin") : setPayError(r.error);
+    setSession({ id: r.sessionId, url: r.purchaseUrl });
+    setStep("whop");
+  }
+
+  /** Live manual payment: upload the screenshot privately, then create an "awaiting confirmation" order. */
+  async function submitManual() {
+    setStarting(true);
+    setPayError(null);
+    const db = sb();
+    let proofPath: string | null = null;
+    if (proof) {
+      const path = `proofs/${crypto.randomUUID()}.${(proof.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "")}`;
+      const up = await db.storage.from("request-images").upload(path, proof, { contentType: proof.type });
+      if (!up.error) proofPath = path;
+    }
+    const { data, error } = await db.rpc("submit_manual_payment", { p_kind: item.kind, p_item_id: item.id, p_txn: txn.trim(), p_proof_path: proofPath });
+    setStarting(false);
+    if (error) return setPayError(error.message);
+    setOrderId(String(data));
+    reload();
+    setStep("manual-done");
+  }
+
+  /** Whop says the payment went through → record the order now and show the success popup. */
+  async function onWhopComplete(receiptId: string | undefined) {
+    setStep("success");
+    const r = receiptId ? await confirmCheckout(receiptId) : { orderId: null, status: "processing" };
+    setOrderId(r.orderId ?? receiptId ?? "processing");
+    reload();
+  }
   const navigate = useThemedNavigate();
 
   /** Phase 2: this runs from Whop's onComplete callback; the webhook makes it official server-side. */
@@ -151,13 +203,21 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
               <span>PAYPAL</span>
               <span>CRYPTO</span>
             </div>
-            <button className="btn block" disabled={settings.maintenance} onClick={() => setStep("whop")}>
-              {settings.maintenance ? "Checkout paused (maintenance)" : `Pay ${charged}`}
+            <button className="btn block" disabled={settings.maintenance || starting} onClick={startWhop}>
+              {settings.maintenance ? "Checkout paused (maintenance)" : starting ? "Opening secure checkout…" : `Pay ${charged}`}
             </button>
+            {payError && (
+              <p className="err mono" style={{ marginTop: 10, fontSize: 12, color: "#ff8a8a" }}>
+                {payError}
+              </p>
+            )}
             {(showPatreon || showManual) && (
               <div className="alt-pay">
                 {showPatreon && (
-                  <button className="linkish" onClick={() => toast("Demo: opens this tier's Patreon join page")}>
+                  <button
+                    className="linkish"
+                    onClick={() => (live && item.patreonJoinUrl ? window.open(item.patreonJoinUrl, "_blank", "noopener") : toast("Demo: opens this tier's Patreon join page"))}
+                  >
                     Pay with Patreon
                   </button>
                 )}
@@ -171,7 +231,42 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
           </>
         )}
 
-        {step === "whop" && (
+        {step === "signin" && (
+          <div className="stack">
+            <p className="muted">Sign in first so your order shows up in your account and we can deliver it.</p>
+            <button
+              className="btn block"
+              onClick={() => {
+                onClose();
+                navigate("/login");
+              }}
+            >
+              Log in
+            </button>
+            <button
+              className="btn ghost block"
+              onClick={() => {
+                onClose();
+                navigate("/signup");
+              }}
+            >
+              Create an account
+            </button>
+          </div>
+        )}
+
+        {step === "whop" && live && session && (
+          <div className="whop-embed">
+            <WhopCheckoutEmbed sessionId={session.id} theme="dark" skipRedirect onComplete={(_plan: string, receipt: string | undefined) => onWhopComplete(receipt)} />
+            {session.url && (
+              <a className="linkish" href={session.url} target="_blank" rel="noopener noreferrer" style={{ display: "block", textAlign: "center", marginTop: 12 }}>
+                Checkout not loading? Open it in a new tab
+              </a>
+            )}
+          </div>
+        )}
+
+        {step === "whop" && !live && (
           <div className="embed">
             <span className="acc">SECURE CHECKOUT · DEMO</span>
             <div className="fake">Card number</div>
@@ -204,8 +299,12 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
             onSubmit={(e) => {
               e.preventDefault();
               if (txn.trim().length < 4) return;
-              recordOrder("awaiting_confirmation", "manual");
-              setStep("manual-done");
+              if (!live) {
+                recordOrder("awaiting_confirmation", "manual");
+                return setStep("manual-done");
+              }
+              if (!user) return setStep("signin");
+              submitManual();
             }}
           >
             <div className="instructions">{settings.payment_instructions}</div>
@@ -221,7 +320,8 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
                 <input type="file" accept="image/*" hidden onChange={(e) => setProof(e.target.files?.[0] ?? null)} />
               </label>
             </div>
-            <button className="btn block" type="submit">
+            {payError && <span className="err">{payError}</span>}
+            <button className="btn block" type="submit" disabled={starting}>
               Submit for confirmation
             </button>
             <button type="button" className="linkish" onClick={() => setStep("summary")}>
