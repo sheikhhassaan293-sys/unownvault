@@ -88,3 +88,15 @@ export async function getDemoAccount() {
 export async function getTakenUsernames() {
   return mock.taken_usernames;
 }
+
+/** Everything editable from /admin, including hidden rows (pages filter with `visible()`). */
+export async function getSiteContent() {
+  return {
+    settings: mock.site_settings,
+    tiers: mock.subscription_tiers,
+    services: mock.services,
+    categories: mock.service_categories,
+    offers: mock.offers,
+    faqs: mock.faqs,
+  };
+}

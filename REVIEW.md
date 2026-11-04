@@ -23,6 +23,13 @@ npm run dev        # http://localhost:3000
 - SEO: per-page titles/descriptions/canonicals, themed Open Graph + Twitter share images, `sitemap.xml`, `robots.txt`, Organization + WebSite + FAQPage structured data.
 - PWA: manifest, icons (incl. maskable + Apple), service worker with offline page, "Install UnownVault" link in the footer when Chrome offers it.
 
+## Admin panel (`/admin`, linked in the footer)
+Edit everything without code: homepage text and status block, every page heading and text block, plans (prices, features, comparison rows, recommended, show/hide, order), services and categories, offers (image, start/end time, pinned), FAQ, Discord link, payment options, currency estimates, maintenance mode. Plus Orders (change status) and Requests (send a quote → buyer gets a Pay button). Backup tab downloads all your content as one file.
+In this demo, edits are saved in your browser only. In Phase 2 the same screens save to the database, are locked to your admin login, and go live for everyone.
+
+## Payment flow (demo)
+Pay → "Simulate a successful payment" → success popup with order number and **Pending delivery** → order appears in Account, where the buyer can **Mark as received**. You can also move it along from Admin → Orders.
+
 ## Mocked
 | Feature | Phase 1 | Phase 2 |
 |---|---|---|
@@ -57,6 +64,6 @@ Needed by the design, worth confirming before Phase 2:
 - Also a `faqs` table so the FAQ is editable from admin.
 
 ## Known gaps (planned for later milestones)
-- No admin panel yet (Milestone 8).
+- Admin edits are browser-only until Phase 2 (database + admin login).
 - Cross-browser testing so far is Chromium only. Safari/Firefox/Edge pass comes with the Milestone 9 polish, along with a Lighthouse run on a deployed URL.
 - Share images fetch the Unbounded font from Google when rendered. If that fetch fails they fall back to a default font.

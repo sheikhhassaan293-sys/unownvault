@@ -81,3 +81,26 @@ export function useNow(intervalMs = 1000) {
 export function daysUntil(iso: string, now: number) {
   return Math.max(0, Math.ceil((Date.parse(iso) - now) / 86_400_000));
 }
+
+/** Renders owner-written text: new lines → line breaks, *stars* → accent colour. */
+export function Rich({ text }: { text: string }) {
+  const lines = (text || "").split("\n");
+  return (
+    <>
+      {lines.map((line, i) => (
+        <span key={i}>
+          {i > 0 && <br />}
+          {line.split(/(\*[^*]+\*)/g).map((part, j) =>
+            part.startsWith("*") && part.endsWith("*") && part.length > 2 ? (
+              <span key={j} className="acc">
+                {part.slice(1, -1)}
+              </span>
+            ) : (
+              <span key={j}>{part}</span>
+            ),
+          )}
+        </span>
+      ))}
+    </>
+  );
+}

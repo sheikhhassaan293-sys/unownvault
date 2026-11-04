@@ -6,5 +6,5 @@ export const metadata: Metadata = { title: "Your account", robots: { index: fals
 
 export default async function AccountPage() {
   const a = await getDemoAccount();
-  return <AccountView subs={a.subscriptions} orders={a.orders} requests={a.custom_requests} />;
+  return <AccountView subs={a.subscriptions} />;
 }

@@ -1,8 +1,8 @@
 "use client";
 
-import type { CustomRequest, Order, SubscriptionTier, UserSubscription } from "@/lib/types";
+import type { SubscriptionTier, UserSubscription } from "@/lib/types";
 import { Price } from "../providers/Currency";
-import { useSession } from "../providers/Session";
+import { ORDER_STATUS, useSession } from "../providers/Session";
 import { useSettings } from "../providers/Settings";
 import { useToast } from "../providers/Toast";
 import { Link, useThemedNavigate } from "../providers/Transition";
@@ -11,20 +11,10 @@ import { RequestRow } from "./RequestForm";
 
 type Sub = UserSubscription & { tier: SubscriptionTier | null };
 
-const ORDER_STATUS: Record<Order["status"], string> = {
-  awaiting_payment: "Awaiting payment",
-  awaiting_confirmation: "Awaiting confirmation",
-  pending: "Pending",
-  in_progress: "In progress",
-  completed: "Completed",
-  refunded: "Refunded",
-  disputed: "Disputed",
-};
-
 const fmt = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
-export function AccountView({ subs, orders, requests }: { subs: Sub[]; orders: Order[]; requests: CustomRequest[] }) {
-  const { user, ready, signOut, myRequests } = useSession();
+export function AccountView({ subs }: { subs: Sub[] }) {
+  const { user, ready, signOut, orders, requests, updateOrder } = useSession();
   const { patreon_enabled } = useSettings();
   const toast = useToast();
   const navigate = useThemedNavigate();
@@ -54,7 +44,7 @@ export function AccountView({ subs, orders, requests }: { subs: Sub[]; orders: O
   }
 
   const active = subs.find((s) => s.status === "active");
-  const allRequests = [...myRequests, ...requests];
+  const allRequests = requests;
 
   return (
     <div className="page">
@@ -165,7 +155,22 @@ export function AccountView({ subs, orders, requests }: { subs: Sub[]; orders: O
                       <Price amount={o.amount} from={o.currency} />
                     </td>
                     <td>
-                      <span className={`badge ${o.status === "completed" ? "quiet" : ""}`}>{ORDER_STATUS[o.status]}</span>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                        <span className={`badge ${o.status === "completed" ? "quiet" : o.status === "pending" ? "solid" : ""}`}>{ORDER_STATUS[o.status]}</span>
+                        {(o.status === "pending" || o.status === "in_progress") && (
+                          <button
+                            className="linkish"
+                            onClick={() => {
+                              if (confirm(`Mark ${o.item_name} as received? Only do this once it's been delivered.`)) {
+                                updateOrder(o.id, { status: "completed" });
+                                toast("Marked as received — thanks!");
+                              }
+                            }}
+                          >
+                            Mark as received
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

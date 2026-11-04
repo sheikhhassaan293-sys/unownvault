@@ -2,14 +2,16 @@
 
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
 import { useState } from "react";
-import type { Service, ServiceCategory } from "@/lib/types";
+import type { ServiceCategory } from "@/lib/types";
+import { useContent, visible } from "../providers/Settings";
 import { BuyButton } from "../providers/Checkout";
 import { Price } from "../providers/Currency";
 import { ShardBullet } from "../ShardBullet";
 
-type Cat = { slug: ServiceCategory; label: string };
-
-export function ServiceGrid({ services, categories }: { services: Service[]; categories: Cat[] }) {
+export function ServiceGrid() {
+  const { content } = useContent();
+  const services = visible(content.services);
+  const categories = content.categories;
   const [cat, setCat] = useState<ServiceCategory | "all">("all");
   const used = categories.filter((c) => services.some((s) => s.category === c.slug));
   const label = (slug: ServiceCategory) => categories.find((c) => c.slug === slug)?.label ?? slug;

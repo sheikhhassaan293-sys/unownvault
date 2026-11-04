@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { OfferFeed } from "@/components/pages/OfferFeed";
 import { CurrencySwitch } from "@/components/providers/Currency";
+import { CopyText } from "@/components/providers/Settings";
 import { Reveal } from "@/components/ui";
-import { getOffers, MOCK_NOW } from "@/lib/data";
 
 export const metadata: Metadata = {
   title: "Updates & limited offers",
@@ -10,8 +10,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/updates" },
 };
 
-export default async function UpdatesPage() {
-  const offers = await getOffers();
+export default function UpdatesPage() {
   return (
     <div className="page">
       <div className="head">
@@ -19,9 +18,7 @@ export default async function UpdatesPage() {
         <div className="head-row">
           <Reveal delay={0.08}>
             <h1 className="h2">
-              Limited drops.
-              <br />
-              <span className="acc">Clock&apos;s running.</span>
+              <CopyText k="updates_title" />
             </h1>
           </Reveal>
           <Reveal delay={0.16}>
@@ -29,7 +26,7 @@ export default async function UpdatesPage() {
           </Reveal>
         </div>
       </div>
-      <OfferFeed offers={offers} mockNow={MOCK_NOW} />
+      <OfferFeed />
     </div>
   );
 }

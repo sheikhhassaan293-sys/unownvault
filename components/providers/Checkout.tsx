@@ -10,9 +10,11 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import type { CheckoutItem } from "@/lib/payments/types";
 import { useMoney } from "./Currency";
 import { useSettings } from "./Settings";
+import { newId, useSession } from "./Session";
 import { useToast } from "./Toast";
+import { useThemedNavigate } from "./Transition";
 
-type Step = "summary" | "whop" | "manual" | "manual-done";
+type Step = "summary" | "whop" | "manual" | "manual-done" | "success";
 const CheckoutCtx = createContext<(item: CheckoutItem) => void>(() => {});
 export const useCheckout = () => useContext(CheckoutCtx);
 
@@ -50,6 +52,33 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
   const box = useRef<HTMLDivElement>(null);
   const [txn, setTxn] = useState("");
   const [proof, setProof] = useState<File | null>(null);
+  const [orderId, setOrderId] = useState<string | null>(null);
+  const { user, addOrder, updateRequest } = useSession();
+  const navigate = useThemedNavigate();
+
+  /** Phase 2: this runs from Whop's onComplete callback; the webhook makes it official server-side. */
+  function recordOrder(status: "pending" | "awaiting_confirmation" | "completed", provider: "whop" | "manual") {
+    const id = newId();
+    addOrder({
+      id,
+      user_id: user?.username ?? "guest",
+      type: item.kind,
+      item_id: item.id,
+      item_name: item.name,
+      amount: item.price,
+      currency: item.currency,
+      status,
+      provider,
+      payment_method: provider === "manual" ? "manual" : "card",
+      transaction_ref: provider === "manual" ? txn : null,
+      external_payment_id: null,
+      proof_url: null,
+      created_at: new Date().toISOString(),
+    });
+    if (item.kind === "custom") updateRequest(item.id, { status: status === "awaiting_confirmation" ? "accepted" : "in_progress" });
+    setOrderId(id);
+  }
+  const isSub = item.kind === "subscription";
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -93,11 +122,12 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
         <button className="x" onClick={onClose} aria-label="Close">
           ×
         </button>
-        <div className="label">Checkout</div>
+        <div className="label">{step === "success" ? "Done" : "Checkout"}</div>
         <h3 id="co-title" className="h3">
           {item.name}
         </h3>
-        <p className="s">{item.description}</p>
+        {step !== "success" && <p className="s">{item.description}</p>}
+        {step !== "success" && (
         <div className="co-sum">
           <span className="mono dim" style={{ fontSize: 12, letterSpacing: ".12em" }}>
             {item.priceIsFrom ? "FROM" : "TOTAL"}
@@ -105,7 +135,8 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
           </span>
           <b>{total}</b>
         </div>
-        {currency !== item.currency && (
+        )}
+        {currency !== item.currency && step !== "success" && (
           <p className="mono dim" style={{ fontSize: 12, marginTop: -8, marginBottom: 16 }}>
             Charged in {item.currency}: {charged}. Display currency is an estimate.
           </p>
@@ -120,8 +151,8 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
               <span>PAYPAL</span>
               <span>CRYPTO</span>
             </div>
-            <button className="btn block" onClick={() => setStep("whop")}>
-              Pay {charged}
+            <button className="btn block" disabled={settings.maintenance} onClick={() => setStep("whop")}>
+              {settings.maintenance ? "Checkout paused (maintenance)" : `Pay ${charged}`}
             </button>
             {(showPatreon || showManual) && (
               <div className="alt-pay">
@@ -152,7 +183,16 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
               On the live site, Whop&apos;s checkout loads right here — cards, Apple Pay, Google Pay, PayPal and crypto. No payment is taken in
               this demo.
             </span>
-            <button className="btn ghost sm" onClick={() => setStep("summary")}>
+            <button
+              className="btn block"
+              onClick={() => {
+                recordOrder(isSub ? "completed" : "pending", "whop");
+                setStep("success");
+              }}
+            >
+              Simulate a successful payment
+            </button>
+            <button className="linkish" onClick={() => setStep("summary")}>
               ← Back
             </button>
           </div>
@@ -164,6 +204,7 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
             onSubmit={(e) => {
               e.preventDefault();
               if (txn.trim().length < 4) return;
+              recordOrder("awaiting_confirmation", "manual");
               setStep("manual-done");
             }}
           >
@@ -187,6 +228,51 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
               ← Back to card checkout
             </button>
           </form>
+        )}
+
+        {step === "success" && (
+          <motion.div className="success" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3, ease: [0.2, 0.7, 0.2, 1] }} role="status">
+            <motion.svg viewBox="0 0 52 52" className="tick" aria-hidden="true">
+              <circle cx="26" cy="26" r="24" fill="none" stroke="currentColor" strokeWidth="2" />
+              <motion.path d="M15 27l7 7 15-16" fill="none" stroke="currentColor" strokeWidth="3" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: 0.15, duration: 0.4 }} />
+            </motion.svg>
+            <h3 className="h3">Payment successful</h3>
+            <div className="success-meta">
+              <span className="mono dim">ORDER #{orderId}</span>
+              <span className="badge solid">{isSub ? "Plan active" : "Pending delivery"}</span>
+            </div>
+            <p>
+              {isSub
+                ? "Your plan is live. Each hunt we deliver shows up in your account, and updates come to you on Discord."
+                : "You're in the queue. We'll update you on Discord as we work — once it's delivered, mark it as received in your account."}
+            </p>
+            <div className="stack" style={{ marginTop: 18 }}>
+              {user ? (
+                <button
+                  className="btn block"
+                  onClick={() => {
+                    onClose();
+                    navigate("/account");
+                  }}
+                >
+                  View my orders
+                </button>
+              ) : (
+                <button
+                  className="btn block"
+                  onClick={() => {
+                    onClose();
+                    navigate("/signup");
+                  }}
+                >
+                  Create an account to track it
+                </button>
+              )}
+              <button className="btn ghost block" onClick={onClose}>
+                Done
+              </button>
+            </div>
+          </motion.div>
         )}
 
         {step === "manual-done" && (

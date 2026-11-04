@@ -56,7 +56,7 @@ export function RequestForm() {
     });
     setBusy(false);
     setDone(req);
-    if (user) addRequest(req);
+    addRequest(req);
   }
 
   const err = (k: keyof Errors) =>
@@ -185,10 +185,10 @@ export function RequestRow({ r }: { r: CustomRequest }) {
 }
 
 /** Logged-in users see their past requests and quote status. */
-export function PastRequests({ demo }: { demo: CustomRequest[] }) {
-  const { user, myRequests } = useSession();
+export function PastRequests() {
+  const { user, requests } = useSession();
   if (!user) return null;
-  const all = [...myRequests, ...demo];
+  const all = requests;
   return (
     <section className="sec" aria-labelledby="past-h">
       <div className="head">

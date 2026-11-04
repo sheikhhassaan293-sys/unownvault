@@ -6,7 +6,7 @@ import { navRoutes, themeForPath, themes } from "@/lib/themes";
 import { LogoMark, Wordmark } from "./Logo";
 import { CurrencySwitch } from "./providers/Currency";
 import { useSession } from "./providers/Session";
-import { useSettings } from "./providers/Settings";
+import { CopyText, useSettings } from "./providers/Settings";
 import { Link } from "./providers/Transition";
 import { ShardBullet } from "./ShardBullet";
 import { DiscordLink } from "./ui";
@@ -97,7 +97,9 @@ export function Footer() {
           <LogoMark />
           <Wordmark />
         </Link>
-        <p>Hunts, dust and raids for Pokémon GO trainers who&apos;d rather not grind.</p>
+        <p>
+          <CopyText k="footer_tagline" />
+        </p>
         <div style={{ marginTop: 18 }}>
           <CurrencySwitch />
         </div>
@@ -116,6 +118,7 @@ export function Footer() {
         <DiscordLink className="">Discord</DiscordLink>
         <a href={`mailto:${contact_email}`}>{contact_email}</a>
         <Link href="/account">Your account</Link>
+        <Link href="/admin">Admin</Link>
         {install && (
           <button
             className="fbtn"

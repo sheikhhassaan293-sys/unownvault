@@ -20,6 +20,7 @@ import type {
   SubscriptionTier,
   UserSubscription,
 } from "@/lib/types";
+import { DEFAULT_COPY } from "@/lib/copy";
 
 /**
  * All mock dates are written relative to this moment. In demo mode the Updates page
@@ -47,6 +48,7 @@ export const site_settings: SiteSettings = {
   maintenance: false,
   patreon_enabled: true,
   manual_payments_enabled: false,
+  copy: DEFAULT_COPY,
   availability_note: "Shiny and shundo hunts depend on availability — what's spawning, in raids or featured in events that week. If a target isn't around, we swap it or carry it over.",
   // approximate — update now and then; visitors only see estimates, charges stay in USD
   fx_rates: { USD: 1, EUR: 0.92, GBP: 0.79, JPY: 150, CZK: 23, CAD: 1.37, AUD: 1.52, CHF: 0.88, PLN: 4, SEK: 10.6 },

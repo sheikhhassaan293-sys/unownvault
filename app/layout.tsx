@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Barlow, JetBrains_Mono, Unbounded } from "next/font/google";
 import { Shell } from "@/components/Shell";
-import { getSiteSettings } from "@/lib/data";
+import { getDemoAccount, getSiteContent, MOCK_NOW } from "@/lib/data";
 import { SITE_DESC, SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -29,7 +29,9 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const settings = await getSiteSettings();
+  const content = await getSiteContent();
+  const settings = content.settings;
+  const demo = await getDemoAccount();
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
@@ -50,7 +52,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={`${unbounded.variable} ${barlow.variable} ${jetbrains.variable}`}>
       <body>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
-        <Shell settings={settings}>{children}</Shell>
+        <Shell content={content} mockNow={MOCK_NOW} demoOrders={demo.orders} demoRequests={demo.custom_requests}>
+          {children}
+        </Shell>
       </body>
     </html>
   );

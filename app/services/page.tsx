@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { ServiceGrid } from "@/components/pages/ServiceGrid";
 import { CurrencySwitch } from "@/components/providers/Currency";
 import { Link } from "@/components/providers/Transition";
+import { CopyText } from "@/components/providers/Settings";
 import { Arrow, Reveal } from "@/components/ui";
-import { getServiceCategories, getServices } from "@/lib/data";
 
 export const metadata: Metadata = {
   title: "Services — shundo, shiny, stardust, levelling & raids",
@@ -11,8 +11,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/services" },
 };
 
-export default async function ServicesPage() {
-  const [services, categories] = await Promise.all([getServices(), getServiceCategories()]);
+export default function ServicesPage() {
   return (
     <div className="page">
       <div className="head">
@@ -20,9 +19,7 @@ export default async function ServicesPage() {
         <div className="head-row">
           <Reveal delay={0.08}>
             <h1 className="h2">
-              One-off hunts,
-              <br />
-              <span className="acc">forged to order.</span>
+              <CopyText k="services_title" />
             </h1>
           </Reveal>
           <Reveal delay={0.16}>
@@ -31,13 +28,15 @@ export default async function ServicesPage() {
         </div>
       </div>
 
-      <ServiceGrid services={services} categories={categories} />
+      <ServiceGrid />
 
       <Reveal className="sec">
         <Link className="panel cta-banner" href="/custom">
           <div>
             <div className="label">Custom requests</div>
-            <h2 className="h3">Not on the list? Ask for it.</h2>
+            <h2 className="h3">
+              <CopyText k="services_banner" />
+            </h2>
           </div>
           <span className="btn">
             Send a request <Arrow />

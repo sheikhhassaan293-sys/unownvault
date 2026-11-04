@@ -36,7 +36,8 @@ export type SubscriptionTier = {
   patreon_join_url: string | null;
 };
 
-export type ServiceCategory =
+export type ServiceCategory = string; // slugs live in service_categories (editable in admin)
+export type _DefaultCategories =
   | "shundo"
   | "shiny"
   | "stardust"
@@ -163,6 +164,8 @@ export type SiteSettings = {
   maintenance: boolean;
   patreon_enabled: boolean;
   manual_payments_enabled: boolean;
+  /** Page headings and text blocks, see lib/copy.ts. */
+  copy: Record<string, string>;
   /** Footnote under the subscription tiers (shiny / shundo availability). */
   availability_note: string;
   /** Display-only FX rates from USD. Charges always happen in the item's currency. */

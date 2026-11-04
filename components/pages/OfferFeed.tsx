@@ -1,13 +1,13 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { Offer } from "@/lib/types";
 import { BuyButton } from "../providers/Checkout";
 import { Price } from "../providers/Currency";
+import { useContent } from "../providers/Settings";
 import { useNow } from "../ui";
 
-const DEMO = process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
 const pad = (n: number) => String(n).padStart(2, "0");
 const D = 86_400_000, H = 3_600_000, M = 60_000;
 
@@ -50,20 +50,20 @@ function OfferImage({ offer, small, tag }: { offer: Offer; small?: boolean; tag?
   );
 }
 
-export function OfferFeed({ offers, mockNow }: { offers: Offer[]; mockNow: string }) {
+export function OfferFeed() {
+  const { content, ready } = useContent();
+  const offers = content.offers.filter((o) => o.published);
   const now = useNow(1000);
-  // Demo: shift every mock date so countdowns are always live, whenever the demo is opened.
-  const [shift] = useState(() => (DEMO && typeof window !== "undefined" ? Date.now() - Date.parse(mockNow) : 0));
 
   const live = useMemo(() => {
     if (now == null) return null;
     return offers
-      .map((o) => ({ o, start: Date.parse(o.starts_at) + shift, end: Date.parse(o.ends_at) + shift }))
+      .map((o) => ({ o, start: Date.parse(o.starts_at), end: Date.parse(o.ends_at) }))
       .filter((x) => x.start <= now && x.end > now)
       .sort((a, b) => Number(b.o.pinned) - Number(a.o.pinned) || b.start - a.start);
-  }, [offers, now, shift]);
+  }, [offers, now]);
 
-  if (live == null) return <div style={{ minHeight: 420 }} aria-busy="true" />;
+  if (live == null || !ready) return <div style={{ minHeight: 420 }} aria-busy="true" />;
 
   const [pin, ...rest] = live[0]?.o.pinned ? live : [null, ...live];
 

@@ -8,7 +8,7 @@
 import { usePathname } from "next/navigation";
 
 export const STATIC = process.env.NEXT_PUBLIC_STATIC_EXPORT === "1";
-const KNOWN = ["subscriptions", "services", "custom", "updates", "signup", "login", "account", "offline"];
+const KNOWN = ["subscriptions", "services", "custom", "updates", "signup", "login", "account", "offline", "admin"];
 
 export function toHref(href: string) {
   if (!STATIC || /^(https?:|mailto:)/.test(href)) return href;

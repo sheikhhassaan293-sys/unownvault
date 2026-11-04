@@ -3,19 +3,31 @@
 import { MotionConfig } from "framer-motion";
 import { useAppPath as usePathname } from "@/lib/paths";
 import { useEffect, useRef, type CSSProperties } from "react";
-import type { SiteSettings } from "@/lib/types";
 import { themeForPath, themeVars } from "@/lib/themes";
+import type { CustomRequest, Order } from "@/lib/types";
 import { Background } from "./background/Background";
 import { Footer, Navbar, TabBar } from "./Chrome";
 import { CheckoutProvider } from "./providers/Checkout";
 import { CurrencyProvider } from "./providers/Currency";
 import { SessionProvider } from "./providers/Session";
-import { SettingsProvider } from "./providers/Settings";
+import { SettingsProvider, useSettings, type SiteContent } from "./providers/Settings";
 import { ToastProvider } from "./providers/Toast";
 import { TransitionProvider } from "./providers/Transition";
 
 /** App frame: theme tokens from the URL, animated background, nav, footer, global providers. */
-export function Shell({ settings, children }: { settings: SiteSettings; children: React.ReactNode }) {
+export function Shell({
+  content,
+  mockNow,
+  demoOrders,
+  demoRequests,
+  children,
+}: {
+  content: SiteContent;
+  mockNow: string;
+  demoOrders: Order[];
+  demoRequests: CustomRequest[];
+  children: React.ReactNode;
+}) {
   const path = usePathname();
   const theme = themeForPath(path);
   const main = useRef<HTMLElement>(null);
@@ -48,10 +60,10 @@ export function Shell({ settings, children }: { settings: SiteSettings; children
   }, []);
 
   return (
-    <SettingsProvider value={settings}>
+    <SettingsProvider value={content} mockNow={mockNow}>
       <MotionConfig reducedMotion="user">
         <ToastProvider>
-          <SessionProvider>
+          <SessionProvider demoOrders={demoOrders} demoRequests={demoRequests}>
             <CurrencyProvider>
               <TransitionProvider>
                 <CheckoutProvider>
@@ -62,6 +74,7 @@ export function Shell({ settings, children }: { settings: SiteSettings; children
                     <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[90] btn sm">
                       Skip to content
                     </a>
+                    <MaintenanceBar />
                     <Navbar />
                     <main id="main" ref={main} style={{ position: "relative", zIndex: 5 }}>
                       {children}
@@ -76,5 +89,15 @@ export function Shell({ settings, children }: { settings: SiteSettings; children
         </ToastProvider>
       </MotionConfig>
     </SettingsProvider>
+  );
+}
+
+function MaintenanceBar() {
+  const { maintenance } = useSettings();
+  if (!maintenance) return null;
+  return (
+    <div className="maint" role="status">
+      Maintenance in progress — checkout is paused for a bit. Browse away, we&apos;ll be right back.
+    </div>
   );
 }

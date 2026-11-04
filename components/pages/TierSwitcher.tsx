@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { Period, SubscriptionTier } from "@/lib/types";
 import { CurrencySwitch, Price } from "../providers/Currency";
 import { BuyButton } from "../providers/Checkout";
-import { useSettings } from "../providers/Settings";
+import { useContent, visible } from "../providers/Settings";
 import { ShardList } from "../ShardBullet";
 import { Reveal } from "../ui";
 
@@ -25,9 +25,11 @@ const flag = (text: string) =>
     text
   );
 
-export function TierSwitcher({ tiers }: { tiers: SubscriptionTier[] }) {
+export function TierSwitcher() {
+  const { content } = useContent();
+  const tiers: SubscriptionTier[] = visible(content.tiers);
   const [period, setPeriod] = useState<Period>("weekly");
-  const settings = useSettings();
+  const settings = content.settings;
   const list = tiers.filter((t) => t.period === period);
   const per = period === "weekly" ? "/ week" : "/ month";
 
