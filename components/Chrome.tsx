@@ -2,6 +2,7 @@
 
 import { useAppPath as usePathname } from "@/lib/paths";
 import { useEffect, useState } from "react";
+import { LIVE } from "@/lib/supabase/env";
 import { navRoutes, themeForPath, themes } from "@/lib/themes";
 import { LogoMark, Wordmark } from "./Logo";
 import { CurrencySwitch } from "./providers/Currency";
@@ -32,7 +33,7 @@ export function Navbar() {
         <LogoMark />
         <Wordmark />
       </Link>
-      <span className="demo-pill hide-m">DEMO</span>
+      {!LIVE && <span className="demo-pill hide-m">DEMO</span>}
       <nav className="links" aria-label="Main">
         {navRoutes.map((r) => (
           <Link key={r.href} href={r.href} className={isOn(r.href, path) ? "on" : ""} aria-current={isOn(r.href, path) ? "page" : undefined}>
@@ -133,7 +134,7 @@ export function Footer() {
       </div>
       <div className="disc">
         <span>Not affiliated with, endorsed by, or connected to Niantic, Nintendo or The Pokémon Company.</span>
-        <span className="mono">DEMO BUILD · PLACEHOLDER PRICES &amp; CONTENT</span>
+        {!LIVE && <span className="mono">DEMO BUILD · PLACEHOLDER PRICES &amp; CONTENT</span>}
       </div>
     </footer>
   );
