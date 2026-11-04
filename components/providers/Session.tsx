@@ -12,13 +12,13 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { syncAdminRole } from "@/app/actions";
 import { sb } from "@/lib/supabase/browser";
 import { LIVE } from "@/lib/supabase/env";
-import type { CustomRequest, Order, SubscriptionTier, UserSubscription } from "@/lib/types";
+import { normalizeRows, type CustomRequest, type Order, type SubscriptionTier, type UserSubscription } from "@/lib/types";
 
 export type DemoUser = {
   id?: string;
   username: string;
   email: string | null;
-  provider: "email" | "discord" | "patreon";
+  provider: "email" | "discord";
   role?: "user" | "admin";
 };
 export type Sub = UserSubscription & { tier: SubscriptionTier | null };
@@ -111,9 +111,9 @@ export function SessionProvider({ demoOrders, demoRequests, children }: { demoOr
       db.from("custom_requests").select("*").order("created_at", { ascending: false }).limit(200),
       db.from("subscriptions").select("*, tier:subscription_tiers(*)").eq("user_id", u.id).order("starts_at", { ascending: false }),
     ]);
-    setOrders((o.data ?? []) as Order[]);
-    setRequests((r.data ?? []) as CustomRequest[]);
-    setSubs((s.data ?? []) as Sub[]);
+    setOrders(normalizeRows(o.data, ["amount"]) as Order[]);
+    setRequests(normalizeRows(r.data, [], ["budget", "quote_amount"]) as CustomRequest[]);
+    setSubs(((s.data ?? []) as Sub[]).map((x) => ({ ...x, tier: x.tier ? { ...x.tier, price: Number(x.tier.price) } : null })));
   }, []);
 
   useEffect(() => {

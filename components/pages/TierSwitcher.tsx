@@ -99,7 +99,6 @@ export function TierSwitcher() {
                   currency: t.currency,
                   period,
                   whopPlanId: t.whop_plan_id,
-                  patreonJoinUrl: settings.patreon_enabled && t.patreon_enabled ? t.patreon_join_url : null,
                 }}
               >
                 Subscribe

@@ -3,7 +3,6 @@
 import type { SubscriptionTier, UserSubscription } from "@/lib/types";
 import { Price } from "../providers/Currency";
 import { ORDER_STATUS, useSession } from "../providers/Session";
-import { useSettings } from "../providers/Settings";
 import { useToast } from "../providers/Toast";
 import { Link, useThemedNavigate } from "../providers/Transition";
 import { daysUntil, Reveal, useNow } from "../ui";
@@ -15,7 +14,6 @@ const fmt = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "n
 
 export function AccountView({ subs }: { subs: Sub[] }) {
   const { user, ready, signOut, orders, requests, markReceived, live, subscriptions } = useSession();
-  const { patreon_enabled } = useSettings();
   const toast = useToast();
   const navigate = useThemedNavigate();
   const now = useNow(60_000);
@@ -120,19 +118,6 @@ export function AccountView({ subs }: { subs: Sub[] }) {
                 See plans
               </Link>
             </>
-          )}
-          {patreon_enabled && (
-            <div style={{ marginTop: 26, paddingTop: 20, borderTop: "1px solid var(--line)" }}>
-              <div className="label bare" style={{ marginBottom: 8 }}>
-                Patreon
-              </div>
-              <p className="muted" style={{ fontSize: 15, marginBottom: 14 }}>
-                Already a patron? Link it and your tier unlocks here automatically.
-              </p>
-              <button className="btn patreon block" onClick={() => toast("Demo: Patreon sign-in opens here")}>
-                Connect Patreon
-              </button>
-            </div>
           )}
         </Reveal>
 

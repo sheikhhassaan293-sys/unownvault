@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { sb } from "@/lib/supabase/browser";
 import { LIVE } from "@/lib/supabase/env";
 import { COPY_FIELDS } from "@/lib/copy";
-import type { Currency, CustomRequest, Faq, Offer, Order, Service, SiteSettings, SubscriptionTier } from "@/lib/types";
+import { normalizeRows, type Currency, type CustomRequest, type Faq, type Offer, type Order, type Service, type SiteSettings, type SubscriptionTier } from "@/lib/types";
 import { DISPLAY_CURRENCIES } from "../providers/Currency";
 import { ORDER_STATUS, useSession } from "../providers/Session";
 import { useContent, type SiteContent } from "../providers/Settings";
@@ -54,7 +54,6 @@ const SITE_GROUPS: { title: string; fields: Field<SiteSettings>[] }[] = [
   {
     title: "Payments",
     fields: [
-      { key: "patreon_enabled", label: "Show “Pay with Patreon” on monthly plans", type: "bool" },
       { key: "manual_payments_enabled", label: "Show “Other payment methods” (manual)", type: "bool" },
       { key: "payment_instructions", label: "Manual payment instructions", type: "textarea", help: "Shown to buyers who pick “Other payment methods”." },
     ],
@@ -83,8 +82,6 @@ const tierFields: Field<SubscriptionTier>[] = [
     { key: "recommended", label: "Recommended (big card)", type: "bool" },
     { key: "active", label: "Visible on site", type: "bool" },
     { key: "whop_plan_id", label: "Whop plan ID", type: "text", help: "From your Whop dashboard, e.g. plan_XXXXXXXX. Needed to take payments." },
-    { key: "patreon_enabled", label: "Allow Patreon", type: "bool", help: "Monthly plans only." },
-    { key: "patreon_join_url", label: "Patreon join link", type: "text" },
 ];
 
 const serviceFields = (cats: { slug: string; label: string }[]): Field<Service>[] => [
@@ -132,10 +129,10 @@ async function loadAllContent(): Promise<SiteContent> {
   if (err) throw new Error(err.message);
   return {
     settings: settings.data as SiteSettings,
-    tiers: tiers.data as SubscriptionTier[],
+    tiers: normalizeRows(tiers.data, ["price", "sort_order"]) as SubscriptionTier[],
     categories: categories.data as SiteContent["categories"],
-    services: services.data as Service[],
-    offers: offers.data as Offer[],
+    services: normalizeRows(services.data, ["price", "sort_order"]) as Service[],
+    offers: normalizeRows(offers.data, ["price"]) as Offer[],
     faqs: faqs.data as Faq[],
   };
 }
@@ -328,9 +325,6 @@ export function AdminView() {
             sort_order: 99,
             active: false,
             whop_plan_id: null,
-            patreon_enabled: false,
-            patreon_tier_id: null,
-            patreon_join_url: null,
           })}
         />
       )}

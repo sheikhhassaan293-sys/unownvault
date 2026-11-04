@@ -6,7 +6,6 @@ import { themes } from "@/lib/themes";
 import { usernameProblem } from "@/lib/username";
 import { LogoMark } from "../Logo";
 import { useSession, type DemoUser } from "../providers/Session";
-import { useSettings } from "../providers/Settings";
 import { Link, useThemedNavigate } from "../providers/Transition";
 
 const EASE = [0.2, 0.7, 0.2, 1] as const;
@@ -24,19 +23,11 @@ function DiscordIcon() {
 }
 
 function ProviderButtons({ onPick }: { onPick: (p: DemoUser["provider"]) => void }) {
-  const { patreon_enabled: patreonSetting } = useSettings();
-  const { live } = useSession();
-  const patreon_enabled = patreonSetting && !live; // Patreon login arrives with the Patreon integration
   return (
     <>
       <button type="button" className="btn discord block" onClick={() => onPick("discord")}>
         <DiscordIcon /> Continue with Discord
       </button>
-      {patreon_enabled && (
-        <button type="button" className="btn patreon block" onClick={() => onPick("patreon")}>
-          Continue with Patreon
-        </button>
-      )}
     </>
   );
 }

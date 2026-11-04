@@ -1,5 +1,6 @@
 import { cacheLife, cacheTag } from "next/cache";
 import * as mock from "@/data/content";
+import { normalizeRows } from "@/lib/types";
 
 /** Live: public content from Supabase, cached until the admin saves (tag "content"). */
 export async function liveContent() {
@@ -21,10 +22,10 @@ export async function liveContent() {
   const st = settings.data as typeof mock.site_settings;
   return {
     settings: { ...mock.site_settings, ...st, copy: { ...mock.site_settings.copy, ...(st.copy ?? {}) } },
-    tiers: (tiers.data ?? []) as typeof mock.subscription_tiers,
+    tiers: normalizeRows(tiers.data, ["price", "sort_order"]) as typeof mock.subscription_tiers,
     categories: (categories.data ?? []) as typeof mock.service_categories,
-    services: (services.data ?? []) as typeof mock.services,
-    offers: (offers.data ?? []) as typeof mock.offers,
+    services: normalizeRows(services.data, ["price", "sort_order"]) as typeof mock.services,
+    offers: normalizeRows(offers.data, ["price"]) as typeof mock.offers,
     faqs: (faqs.data ?? []) as typeof mock.faqs,
   };
 }

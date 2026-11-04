@@ -105,7 +105,6 @@
   .btn svg { width: 16px; height: 16px; }
   .btn[disabled], .btn[aria-disabled="true"] { opacity: 0.35; pointer-events: none; }
   .btn.discord { background: #5865f2; color: #fff; }
-  .btn.patreon { background: transparent; color: var(--text); box-shadow: inset 0 0 0 1px rgba(var(--text-rgb), 0.3); clip-path: none; border-radius: 3px; }
   .linkish { font-family: var(--fm); font-size: 12px; letter-spacing: 0.06em; color: var(--muted); text-decoration: underline; text-decoration-color: rgba(var(--rgb), 0.4); text-underline-offset: 4px; background: none; border: 0; padding: 0; }
   .linkish:hover { color: var(--acc); }
 
@@ -201,7 +200,6 @@
     animation: uv-spin 6s linear infinite; }
   .tier.rec .ribbon { position: absolute; top: 16px; right: 18px; font-family: var(--fm); font-size: 11px; letter-spacing: 0.14em; color: var(--on-acc); background: var(--acc); padding: 4px 8px; border-radius: 2px; }
   .tier.rec .price b { font-size: 64px; }
-  .patreon-alt { margin-top: 12px; text-align: center; }
   .cmpwrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .cmp { width: 100%; border-collapse: collapse; font-size: 15px; min-width: 520px; }
   .cmp th, .cmp td { text-align: left; padding: 16px 12px; border-bottom: 1px solid rgba(var(--rgb), 0.14); }

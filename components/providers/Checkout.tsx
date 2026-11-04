@@ -3,7 +3,7 @@
 /**
  * Checkout drawer — Phase 1 mock of the Phase 2 flow:
  *   one "Pay" button → Whop embedded checkout (renders inside this dialog)
- *   small secondary links → "Pay with Patreon" (monthly tiers, if enabled) / "Other payment methods" (manual, if enabled)
+ *   small secondary link → "Other payment methods" (manual, if enabled)
  */
 import { AnimatePresence, motion } from "framer-motion";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
@@ -11,7 +11,6 @@ import type { CheckoutItem } from "@/lib/payments/types";
 import { useMoney } from "./Currency";
 import { useSettings } from "./Settings";
 import { newId, useSession } from "./Session";
-import { useToast } from "./Toast";
 import { useThemedNavigate } from "./Transition";
 import dynamic from "next/dynamic";
 import { confirmCheckout, createCheckout } from "@/app/actions";
@@ -57,7 +56,6 @@ export function BuyButton({ item, className = "btn", children }: { item: Checkou
 function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; step: Step; setStep: (s: Step) => void; onClose: () => void }) {
   const settings = useSettings();
   const { money, exact, currency } = useMoney();
-  const toast = useToast();
   const box = useRef<HTMLDivElement>(null);
   const [txn, setTxn] = useState("");
   const [proof, setProof] = useState<File | null>(null);
@@ -144,7 +142,6 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
     };
   }, [onClose]);
 
-  const showPatreon = settings.patreon_enabled && item.period === "monthly" && !!item.patreonJoinUrl;
   const showManual = settings.manual_payments_enabled;
   const total = money(item.price, item.currency);
   const charged = exact(item.price, item.currency);
@@ -211,21 +208,11 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
                 {payError}
               </p>
             )}
-            {(showPatreon || showManual) && (
+            {showManual && (
               <div className="alt-pay">
-                {showPatreon && (
-                  <button
-                    className="linkish"
-                    onClick={() => (live && item.patreonJoinUrl ? window.open(item.patreonJoinUrl, "_blank", "noopener") : toast("Demo: opens this tier's Patreon join page"))}
-                  >
-                    Pay with Patreon
-                  </button>
-                )}
-                {showManual && (
-                  <button className="linkish" onClick={() => setStep("manual")}>
-                    Other payment methods
-                  </button>
-                )}
+                <button className="linkish" onClick={() => setStep("manual")}>
+                  Other payment methods
+                </button>
               </div>
             )}
           </>

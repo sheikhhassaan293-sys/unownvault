@@ -76,5 +76,5 @@ Vercel → your project → **Settings → Domains** → add your domain and fol
 
 ### Good to know
 - **Emails**: Supabase's built-in email sender only allows a few emails per hour. Before launch, add your own email sender under Supabase **Authentication → Emails → SMTP Settings** (e.g. Resend, Postmark or Brevo).
-- **Patreon** and the **2-day expiry reminder email** are not built yet; they come next.
+- The **2-day expiry reminder email** and **forgot password** are not built yet; they come next.
 - **Backups**: Supabase backs up daily on paid plans. You can also download your content any time from Admin → Backup.

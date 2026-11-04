@@ -12,7 +12,6 @@ export type Profile = {
   username: string;
   discord_tag: string | null;
   role: Role;
-  patreon_user_id: string | null;
   created_at: string;
 };
 
@@ -31,9 +30,6 @@ export type SubscriptionTier = {
   sort_order: number;
   active: boolean;
   whop_plan_id: string | null;
-  patreon_enabled: boolean;
-  patreon_tier_id: string | null;
-  patreon_join_url: string | null;
 };
 
 export type ServiceCategory = string; // slugs live in service_categories (editable in admin)
@@ -97,7 +93,7 @@ export type Order = {
   amount: number;
   currency: Currency;
   status: OrderStatus;
-  provider: "whop" | "patreon" | "manual";
+  provider: "whop" | "manual";
   payment_method: string | null;
   transaction_ref: string | null;
   external_payment_id: string | null;
@@ -109,12 +105,12 @@ export type UserSubscription = {
   id: string;
   user_id: string;
   tier_id: string;
-  source: "whop" | "patreon" | "manual";
+  source: "whop" | "manual";
   external_id: string | null;
   starts_at: string;
   ends_at: string;
   status: "active" | "cancelled" | "expired" | "past_due";
-  /** true when the provider will auto-renew (Whop / Patreon). */
+  /** true when the provider will auto-renew (Whop). */
   renews: boolean;
   /** Whop's page where the buyer manages / cancels. */
   manage_url?: string | null;
@@ -164,7 +160,6 @@ export type SiteSettings = {
   status_updates: string;
   payment_instructions: string;
   maintenance: boolean;
-  patreon_enabled: boolean;
   manual_payments_enabled: boolean;
   /** Page headings and text blocks, see lib/copy.ts. */
   copy: Record<string, string>;
@@ -173,3 +168,15 @@ export type SiteSettings = {
   /** Display-only FX rates from USD. Charges always happen in the item's currency. */
   fx_rates: Record<Currency, number>;
 };
+
+/** Postgres "numeric" can arrive as text ("8.00") — always turn money fields back into numbers. */
+export const num = (v: unknown): number => (typeof v === "number" ? v : v == null || v === "" ? 0 : Number(v));
+export const numOrNull = (v: unknown): number | null => (v == null || v === "" ? null : Number(v));
+export function normalizeRows<T extends Record<string, unknown>>(rows: T[] | null | undefined, fields: string[], nullable: string[] = []): T[] {
+  return (rows ?? []).map((r) => {
+    const o: Record<string, unknown> = { ...r };
+    for (const f of fields) if (f in o) o[f] = num(o[f]);
+    for (const f of nullable) if (f in o) o[f] = numOrNull(o[f]);
+    return o as T;
+  });
+}

@@ -34,10 +34,8 @@ Pay → "Simulate a successful payment" → success popup with order number and 
 | Feature | Phase 1 | Phase 2 |
 |---|---|---|
 | Content | `data/content.ts` | Supabase tables (same shape, `lib/types.ts`) |
-| Sign up / log in | Any details work; stored in your browser only | Supabase email + Discord (+ Patreon) |
 | Username "taken" check | `taken_usernames` list in content.ts | Live DB lookup |
 | Checkout | Dialog shows where Whop's embedded checkout goes | Whop embedded checkout + webhooks |
-| Pay with Patreon | Toast | Patreon join link per tier |
 | Other payment methods | Built, but off (`manual_payments_enabled: false`) | Same UI, saved to orders for admin confirmation |
 | Account page | Sample plan, orders, requests | Your real data |
 | Custom requests | Saved in your browser | Saved to DB, quotes from admin |
@@ -49,18 +47,15 @@ Pay → "Simulate a successful payment" → success popup with order number and 
 - **Fonts**: `app/layout.tsx` (Unbounded / Barlow / JetBrains Mono). Type scale lives at the top of `app/globals.css`.
 - **Prices, tiers, features, services, offers, FAQ, homepage headline, Discord link, payment instructions**: `data/content.ts`. Prices are stored in USD.
 - **Currency estimates**: `site_settings.fx_rates` in `data/content.ts`.
-- **Show manual payments**: set `manual_payments_enabled: true`. **Hide Patreon**: set `patreon_enabled: false`.
 - **Site URL for SEO**: `NEXT_PUBLIC_SITE_URL` (see `.env.example`).
 - **Background animation**: `components/background/scenes.ts` (one function per theme; counts and speeds are at the top of each).
 - **Page copy**: each page lives in `app/<page>/page.tsx`.
 
 ## Columns added to the spec's data model
 Needed by the design, worth confirming before Phase 2:
-- `subscription_tiers`: `tagline`, `compare` (jsonb for the comparison table), `patreon_enabled`.
 - `services`: `featured`, `popular`, `currency`.
 - `offers`: `currency`.
 - `custom_requests`: `request_type`, `target`, `discord_username`, `image_url`, `quote_amount`, `created_at`.
-- `site_settings`: hero eyebrow/accent line, status-block labels, `queue_open`, `patreon_enabled`, `manual_payments_enabled`, `fx_rates`, `contact_email`.
 - Also a `faqs` table so the FAQ is editable from admin.
 
 ## Known gaps (planned for later milestones)

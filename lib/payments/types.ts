@@ -3,12 +3,11 @@
  * already speaks the right language; the providers are implemented in Milestone 7.
  *
  *  - whop    → primary: embedded checkout for subscriptions, services, offers, quotes
- *  - patreon → optional: monthly tiers only, join link + OAuth + webhooks
  *  - manual  → fallback: instructions + transaction id + screenshot, admin confirms
  */
 import type { Currency } from "@/lib/types";
 
-export type ProviderId = "whop" | "patreon" | "manual";
+export type ProviderId = "whop" | "manual";
 
 export type CheckoutItem = {
   kind: "subscription" | "service" | "offer" | "custom";
@@ -20,7 +19,6 @@ export type CheckoutItem = {
   priceIsFrom?: boolean;
   period?: "weekly" | "monthly";
   whopPlanId?: string | null;
-  patreonJoinUrl?: string | null;
 };
 
 export type CheckoutSession =
@@ -29,7 +27,7 @@ export type CheckoutSession =
 
 export interface PaymentProvider {
   id: ProviderId;
-  /** Whether this provider can take payment for the item (e.g. Patreon = monthly tiers only). */
+  /** Whether this provider can take payment for the item. */
   supports(item: CheckoutItem): boolean;
   createCheckout(item: CheckoutItem, userId: string): Promise<CheckoutSession>;
   /** Verify + parse an incoming webhook; returns normalised events for the order/subscription service. */

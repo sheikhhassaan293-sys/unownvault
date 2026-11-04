@@ -14,7 +14,6 @@ update public.site_settings set discord_url = 'https://discord.gg/your-invite',
 Bank transfer: IBAN PK00 XXXX 0000 0000 0000 0000
 Use your trainer name as the reference.',
   maintenance = false,
-  patreon_enabled = true,
   manual_payments_enabled = false,
   copy = '{"how_title":"Three steps.\nZero grinding.","home_steps":"Choose | Pick a weekly or monthly plan, or order a one-off hunt from the services page.\nPay | Card, Apple Pay, Google Pay, PayPal or crypto through secure checkout. Takes a minute.\nWe hunt | Your order joins the queue and progress lands in your Discord DMs until it''s done.","faq_title":"Before\nyou order.","discord_title":"The vault''s front door\nis on Discord.","discord_text":"Order updates, event drops and first dibs on limited slots — all in one server.","subs_title":"Weekly grind.\nYou sleep, *we hunt.*","services_title":"One-off hunts,\n*forged to order.*","services_banner":"Not on the list? Ask for it.","custom_title":"Not on the list?\n*We''ll hunt it down.*","custom_lead":"Tell us the target, the deadline and your budget. You''ll get a quote within a day — and you only pay once you accept it.","custom_steps":"Send | Fill in the form with what you''re after.\nGet a quote | We reply on Discord within 24 hours with a price and timeline.\nPay & we start | Accept and a pay button appears in your account. Work starts right after.","custom_form_title":"Your target,\nyour terms.","custom_points":"Quotes in USD, no surprises later\nPay only after you accept the quote\nProgress updates on Discord\nAnything that''s in the game right now","updates_title":"Limited drops.\n*Clock''s running.*","footer_tagline":"Hunts, dust and raids for Pokémon GO trainers who''d rather not grind."}'::jsonb,
   availability_note = 'Shiny and shundo hunts depend on availability — what''s spawning, in raids or featured in events that week. If a target isn''t around, we swap it or carry it over.',
@@ -27,16 +26,17 @@ insert into public.service_categories (slug, label, sort_order) values
   ('stardust', 'Stardust orders', 3),
   ('xp', 'XP / levelling', 4),
   ('raids', 'Raid packages', 5),
-  ('events', 'Event packages', 6)
+  ('events', 'Event packages', 6),
+  ('items', 'Items', 7)
 on conflict (slug) do nothing;
 
-insert into public.subscription_tiers (id, name, tagline, period, price, currency, features, compare, recommended, sort_order, active, whop_plan_id, patreon_enabled, patreon_tier_id, patreon_join_url) values
-  ('tier_w_scout', 'Scout', 'Dip in. Keep your collection moving.', 'weekly', 9, 'USD', '["10 raids","1 shiny hunt","Progress updates on Discord"]'::jsonb, '{"Raids":"10","Shiny hunts":"1","Hundo hunts":"—","Queue":"Standard","Custom request discount":"—","Discord progress updates":"Yes"}'::jsonb, false, 1, true, null, false, null, null),
-  ('tier_w_hunter', 'Hunter', 'The sweet spot for active trainers.', 'weekly', 19, 'USD', '["25 raids","3 shiny hunts","Priority queue","10% off custom requests"]'::jsonb, '{"Raids":"25","Shiny hunts":"3","Hundo hunts":"—","Queue":"Priority","Custom request discount":"10%","Discord progress updates":"Yes"}'::jsonb, true, 2, true, null, false, null, null),
-  ('tier_w_apex', 'Apex', 'Everything, first, every week.', 'weekly', 35, 'USD', '["50 raids","6 shiny hunts","1 hundo hunt","Top of the queue","20% off custom requests"]'::jsonb, '{"Raids":"50","Shiny hunts":"6","Hundo hunts":"1","Queue":"Top","Custom request discount":"20%","Discord progress updates":"Yes"}'::jsonb, false, 3, true, null, false, null, null),
-  ('tier_m_scout', 'Scout', 'Dip in. Keep your collection moving.', 'monthly', 29, 'USD', '["45 raids","4 shiny hunts","Progress updates on Discord"]'::jsonb, '{"Raids":"45","Shiny hunts":"4","Hundo hunts":"—","Queue":"Standard","Custom request discount":"—","Discord progress updates":"Yes"}'::jsonb, false, 1, true, null, true, null, 'https://www.patreon.com/'),
-  ('tier_m_hunter', 'Hunter', 'The sweet spot for active trainers.', 'monthly', 59, 'USD', '["110 raids","14 shiny hunts","Priority queue","10% off custom requests"]'::jsonb, '{"Raids":"110","Shiny hunts":"14","Hundo hunts":"—","Queue":"Priority","Custom request discount":"10%","Discord progress updates":"Yes"}'::jsonb, true, 2, true, null, true, null, 'https://www.patreon.com/'),
-  ('tier_m_apex', 'Apex', 'Everything, first, every month.', 'monthly', 99, 'USD', '["220 raids","28 shiny hunts","4 hundo hunts","Top of the queue","20% off custom requests"]'::jsonb, '{"Raids":"220","Shiny hunts":"28","Hundo hunts":"4","Queue":"Top","Custom request discount":"20%","Discord progress updates":"Yes"}'::jsonb, false, 3, true, null, true, null, 'https://www.patreon.com/')
+insert into public.subscription_tiers (id, name, tagline, period, price, currency, features, compare, recommended, sort_order, active, whop_plan_id) values
+  ('tier_w_scout', 'Scout', 'Dip in. Keep your collection moving.', 'weekly', 9, 'USD', '["10 raids","1 shiny hunt","Progress updates on Discord"]'::jsonb, '{"Raids":"10","Shiny hunts":"1","Hundo hunts":"—","Queue":"Standard","Custom request discount":"—","Discord progress updates":"Yes"}'::jsonb, false, 1, true, null),
+  ('tier_w_hunter', 'Hunter', 'The sweet spot for active trainers.', 'weekly', 19, 'USD', '["25 raids","3 shiny hunts","Priority queue","10% off custom requests"]'::jsonb, '{"Raids":"25","Shiny hunts":"3","Hundo hunts":"—","Queue":"Priority","Custom request discount":"10%","Discord progress updates":"Yes"}'::jsonb, true, 2, true, null),
+  ('tier_w_apex', 'Apex', 'Everything, first, every week.', 'weekly', 35, 'USD', '["50 raids","6 shiny hunts","1 hundo hunt","Top of the queue","20% off custom requests"]'::jsonb, '{"Raids":"50","Shiny hunts":"6","Hundo hunts":"1","Queue":"Top","Custom request discount":"20%","Discord progress updates":"Yes"}'::jsonb, false, 3, true, null),
+  ('tier_m_scout', 'Scout', 'Dip in. Keep your collection moving.', 'monthly', 29, 'USD', '["45 raids","4 shiny hunts","Progress updates on Discord"]'::jsonb, '{"Raids":"45","Shiny hunts":"4","Hundo hunts":"—","Queue":"Standard","Custom request discount":"—","Discord progress updates":"Yes"}'::jsonb, false, 1, true, null),
+  ('tier_m_hunter', 'Hunter', 'The sweet spot for active trainers.', 'monthly', 59, 'USD', '["110 raids","14 shiny hunts","Priority queue","10% off custom requests"]'::jsonb, '{"Raids":"110","Shiny hunts":"14","Hundo hunts":"—","Queue":"Priority","Custom request discount":"10%","Discord progress updates":"Yes"}'::jsonb, true, 2, true, null),
+  ('tier_m_apex', 'Apex', 'Everything, first, every month.', 'monthly', 99, 'USD', '["220 raids","28 shiny hunts","4 hundo hunts","Top of the queue","20% off custom requests"]'::jsonb, '{"Raids":"220","Shiny hunts":"28","Hundo hunts":"4","Queue":"Top","Custom request discount":"20%","Discord progress updates":"Yes"}'::jsonb, false, 3, true, null)
 on conflict (id) do nothing;
 
 insert into public.services (currency, image_url, active, whop_plan_id, featured, popular, id, name, category, description, price, price_is_from, delivery_time, sort_order) values
@@ -51,15 +51,18 @@ insert into public.services (currency, image_url, active, whop_plan_id, featured
   ('USD', null, true, null, false, false, 'svc_raid20', 'Raid Pack ×20', 'raids', 'Twenty raids of your choice from what''s live.', 12, false, '2 days', 9),
   ('USD', null, true, null, false, false, 'svc_legend10', 'Legendary Pack ×10', 'raids', 'Ten top-tier raids while the boss is in rotation.', 18, false, '2 days', 10),
   ('USD', null, true, null, false, false, 'svc_eventday', 'Event Day Package', 'events', 'Full coverage of a featured event day: shiny hunts, bonus catches and event research.', 22, false, 'event day', 11),
-  ('USD', null, true, null, false, false, 'svc_eventweek', 'Event Week Package', 'events', 'Every day of a week-long event worked for its bonuses. One price, all of it.', 49, false, 'event week', 12)
+  ('USD', null, true, null, false, false, 'svc_eventweek', 'Event Week Package', 'events', 'Every day of a week-long event worked for its bonuses. One price, all of it.', 49, false, 'event week', 12),
+  ('USD', null, true, null, false, false, 'svc_rarecandy25', 'Rare Candy ×25', 'items', 'Twenty-five Rare Candies, farmed and banked on your account.', 8, false, '1–2 days', 13),
+  ('USD', null, true, null, false, false, 'svc_rarecandy100', 'Rare Candy ×100', 'items', 'A hundred Rare Candies for powering up whatever you''re short on.', 25, false, '3–5 days', 14),
+  ('USD', null, true, null, false, false, 'svc_rarecandyxl', 'Rare Candy XL ×20', 'items', 'Twenty Rare Candy XL to push your favourites past level 40.', 18, false, '2–4 days', 15)
 on conflict (id) do nothing;
 
 insert into public.offers (id, title, body, image_url, price, currency, starts_at, ends_at, pinned, published, whop_plan_id) values
-  ('off_weekend', 'Event weekend shiny bundle', 'Three shiny hunts on this weekend''s featured targets, plus a raid pack. Ends when the event does.', null, 24, 'USD', '2026-11-04T02:23:19.920Z', '2026-11-07T04:37:07.920Z', true, true, null),
-  ('off_raidhour', 'Raid hour package', 'Ten raids during this week''s raid hour. Limited slots.', null, 9, 'USD', '2026-11-04T16:23:19.920Z', '2026-11-05T17:03:31.920Z', false, true, null),
-  ('off_dust', 'Double dust week: 3M', 'Three million stardust while the bonus is live — 25% cheaper than usual.', null, 45, 'USD', '2026-11-02T20:23:19.920Z', '2026-11-10T01:23:19.920Z', false, true, null),
-  ('off_spotlight', 'Spotlight hour hunts', 'Shiny hunts during spotlight hour, two targets.', null, 8, 'USD', '2026-10-28T20:23:19.920Z', '2026-11-04T20:23:19.920Z', false, true, null),
-  ('off_scheduled', 'Season opener pack', 'Goes live with the new season.', null, 30, 'USD', '2026-11-08T22:23:19.920Z', '2026-11-15T18:23:19.920Z', false, true, null)
+  ('off_weekend', 'Event weekend shiny bundle', 'Three shiny hunts on this weekend''s featured targets, plus a raid pack. Ends when the event does.', null, 24, 'USD', '2026-11-04T02:52:56.093Z', '2026-11-07T05:06:44.093Z', true, true, null),
+  ('off_raidhour', 'Raid hour package', 'Ten raids during this week''s raid hour. Limited slots.', null, 9, 'USD', '2026-11-04T16:52:56.093Z', '2026-11-05T17:33:08.093Z', false, true, null),
+  ('off_dust', 'Double dust week: 3M', 'Three million stardust while the bonus is live — 25% cheaper than usual.', null, 45, 'USD', '2026-11-02T20:52:56.093Z', '2026-11-10T01:52:56.093Z', false, true, null),
+  ('off_spotlight', 'Spotlight hour hunts', 'Shiny hunts during spotlight hour, two targets.', null, 8, 'USD', '2026-10-28T20:52:56.093Z', '2026-11-04T20:52:56.093Z', false, true, null),
+  ('off_scheduled', 'Season opener pack', 'Goes live with the new season.', null, 30, 'USD', '2026-11-08T22:52:56.093Z', '2026-11-15T18:52:56.093Z', false, true, null)
 on conflict (id) do nothing;
 
 insert into public.faqs (id, sort_order, question, answer) values

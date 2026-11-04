@@ -46,7 +46,6 @@ export const site_settings: SiteSettings = {
   payment_instructions:
     "JazzCash / Easypaisa: 0300-0000000 (UnownVault)\nBank transfer: IBAN PK00 XXXX 0000 0000 0000 0000\nUse your trainer name as the reference.",
   maintenance: false,
-  patreon_enabled: true,
   manual_payments_enabled: false,
   copy: DEFAULT_COPY,
   availability_note: "Shiny and shundo hunts depend on availability — what's spawning, in raids or featured in events that week. If a target isn't around, we swap it or carry it over.",
@@ -84,9 +83,6 @@ export const subscription_tiers: SubscriptionTier[] = [
     sort_order: 1,
     active: true,
     whop_plan_id: null,
-    patreon_enabled: false,
-    patreon_tier_id: null,
-    patreon_join_url: null,
   },
   {
     id: "tier_w_hunter",
@@ -101,9 +97,6 @@ export const subscription_tiers: SubscriptionTier[] = [
     sort_order: 2,
     active: true,
     whop_plan_id: null,
-    patreon_enabled: false,
-    patreon_tier_id: null,
-    patreon_join_url: null,
   },
   {
     id: "tier_w_apex",
@@ -118,9 +111,6 @@ export const subscription_tiers: SubscriptionTier[] = [
     sort_order: 3,
     active: true,
     whop_plan_id: null,
-    patreon_enabled: false,
-    patreon_tier_id: null,
-    patreon_join_url: null,
   },
   {
     id: "tier_m_scout",
@@ -135,9 +125,6 @@ export const subscription_tiers: SubscriptionTier[] = [
     sort_order: 1,
     active: true,
     whop_plan_id: null,
-    patreon_enabled: true,
-    patreon_tier_id: null,
-    patreon_join_url: "https://www.patreon.com/",
   },
   {
     id: "tier_m_hunter",
@@ -152,9 +139,6 @@ export const subscription_tiers: SubscriptionTier[] = [
     sort_order: 2,
     active: true,
     whop_plan_id: null,
-    patreon_enabled: true,
-    patreon_tier_id: null,
-    patreon_join_url: "https://www.patreon.com/",
   },
   {
     id: "tier_m_apex",
@@ -169,9 +153,6 @@ export const subscription_tiers: SubscriptionTier[] = [
     sort_order: 3,
     active: true,
     whop_plan_id: null,
-    patreon_enabled: true,
-    patreon_tier_id: null,
-    patreon_join_url: "https://www.patreon.com/",
   },
 ];
 
@@ -183,6 +164,7 @@ export const service_categories: { slug: ServiceCategory; label: string }[] = [
   { slug: "xp", label: "XP / levelling" },
   { slug: "raids", label: "Raid packages" },
   { slug: "events", label: "Event packages" },
+  { slug: "items", label: "Items" },
 ];
 
 const svc = (
@@ -211,6 +193,9 @@ export const services: Service[] = [
   svc({ id: "svc_legend10", name: "Legendary Pack ×10", category: "raids", description: "Ten top-tier raids while the boss is in rotation.", price: 18, price_is_from: false, delivery_time: "2 days", sort_order: 10 }),
   svc({ id: "svc_eventday", name: "Event Day Package", category: "events", description: "Full coverage of a featured event day: shiny hunts, bonus catches and event research.", price: 22, price_is_from: false, delivery_time: "event day", sort_order: 11 }),
   svc({ id: "svc_eventweek", name: "Event Week Package", category: "events", description: "Every day of a week-long event worked for its bonuses. One price, all of it.", price: 49, price_is_from: false, delivery_time: "event week", sort_order: 12 }),
+  svc({ id: "svc_rarecandy25", name: "Rare Candy ×25", category: "items", description: "Twenty-five Rare Candies, farmed and banked on your account.", price: 8, price_is_from: false, delivery_time: "1–2 days", sort_order: 13 }),
+  svc({ id: "svc_rarecandy100", name: "Rare Candy ×100", category: "items", description: "A hundred Rare Candies for powering up whatever you're short on.", price: 25, price_is_from: false, delivery_time: "3–5 days", sort_order: 14 }),
+  svc({ id: "svc_rarecandyxl", name: "Rare Candy XL ×20", category: "items", description: "Twenty Rare Candy XL to push your favourites past level 40.", price: 18, price_is_from: false, delivery_time: "2–4 days", sort_order: 15 }),
 ];
 
 // ───────────────────────────────────────────── offers
@@ -299,7 +284,6 @@ export const demo_profile: Profile = {
   username: "NightHunter_7",
   discord_tag: "nighthunter7",
   role: "user",
-  patreon_user_id: null,
   created_at: at(-24 * 40),
 };
 
