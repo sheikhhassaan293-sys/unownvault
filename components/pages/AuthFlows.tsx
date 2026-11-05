@@ -59,10 +59,15 @@ export function SignupFlow({ taken }: { taken: string[] }) {
     ready,
     needsUsername,
     signInDiscord,
+    signUpEmail,
     checkUsername,
     claimUsername,
   } = useSession();
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  // backup for Discord accounts that Discord won't let sign in (no verified email / phone)
+  const [showEmail, setShowEmail] = useState(false);
+  const [email, setEmail] = useState("");
+  const [pw, setPw] = useState("");
   const [provider, setProvider] = useState<DemoUser["provider"]>("email");
   const [formErr, setFormErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -132,6 +137,20 @@ export function SignupFlow({ taken }: { taken: string[] }) {
     setStep(2);
   };
 
+  const emailSignup = async () => {
+    setFormErr(null);
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) return setFormErr("Enter a valid email");
+    if (pw.length < 8) return setFormErr("Password needs at least 8 characters");
+    if (!live) return pickProvider("email");
+    setBusy(true);
+    const r = await signUpEmail(email.trim(), pw);
+    setBusy(false);
+    if (r.error) return setFormErr(r.error);
+    if (r.needsConfirm) return setFormErr("Check your inbox for a confirmation link, then come back here.");
+    setProvider("email");
+    setStep(2);
+  };
+
   const claim = async () => {
     if (check.state !== "ok") return;
     if (live) {
@@ -159,7 +178,7 @@ export function SignupFlow({ taken }: { taken: string[] }) {
               </p>
               <div className="stack">
                 <ProviderButtons onPick={pickProvider} />
-                {formErr && <span className="ustat bad">{formErr}</span>}
+                {!showEmail && formErr && <span className="ustat bad">{formErr}</span>}
                 <p
                   className="mono dim"
                   style={{ fontSize: 12, textAlign: "center", lineHeight: 1.6 }}
@@ -167,6 +186,58 @@ export function SignupFlow({ taken }: { taken: string[] }) {
                   We use Discord so you get order updates where you already are.
                   No password to remember.
                 </p>
+                {!showEmail ? (
+                  <button
+                    type="button"
+                    className="linkish"
+                    style={{ textAlign: "center" }}
+                    onClick={() => {
+                      setFormErr(null);
+                      setShowEmail(true);
+                    }}
+                  >
+                    Discord says you need a verified email? Sign up with email instead
+                  </button>
+                ) : (
+                  <>
+                    <div className="or">OR</div>
+                    <form
+                      className="stack"
+                      noValidate
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        emailSignup();
+                      }}
+                    >
+                      <div className="f">
+                        <label htmlFor="su-email">Email</label>
+                        <input
+                          id="su-email"
+                          type="email"
+                          autoComplete="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="you@email.com"
+                        />
+                      </div>
+                      <div className="f">
+                        <label htmlFor="su-pw">Password</label>
+                        <input
+                          id="su-pw"
+                          type="password"
+                          autoComplete="new-password"
+                          value={pw}
+                          onChange={(e) => setPw(e.target.value)}
+                          placeholder="At least 8 characters"
+                        />
+                      </div>
+                      {formErr && <span className="ustat bad">{formErr}</span>}
+                      <button className="btn btn-block" type="submit" disabled={busy}>
+                        {busy ? "Creating account…" : "Create account with email"}
+                      </button>
+                    </form>
+                  </>
+                )}
                 <p
                   className="mono dim"
                   style={{ fontSize: 12, textAlign: "center", marginTop: 6 }}
