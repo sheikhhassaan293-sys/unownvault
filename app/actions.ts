@@ -223,3 +223,80 @@ export async function discordStep(step: "delete" | "roles" | "category", index =
     return { ok: false, done, failed, message: e instanceof Error ? e.message : String(e) };
   }
 }
+
+/**
+ * Re-post one info channel (e.g. #plans) from the current site content.
+ * Only the bot's own posts in that channel are replaced; nothing else in the server changes.
+ */
+export async function discordRefreshChannel(name: string): Promise<DiscordStepResult> {
+  try {
+    await requireAdmin();
+    const { dc, targetGuild, findChannel, clearBotMessages } = await import("@/lib/discord/api");
+    const { blueprint } = await import("@/lib/discord/blueprint");
+    const { getSiteContent } = await import("@/lib/data");
+    const { guild } = await targetGuild();
+    if (!guild) return { ok: false, done: [], failed: [], message: "The bot isn't in your server." };
+    const spec = blueprint(await getSiteContent(), process.env.NEXT_PUBLIC_SITE_URL ?? "")
+      .flatMap((c) => c.channels)
+      .find((c) => c.name === name);
+    if (!spec) return { ok: false, done: [], failed: [], message: `#${name} isn't part of the layout.` };
+    const ch = await findChannel(guild.id, name);
+    if (!ch) return { ok: false, done: [], failed: [], message: `There's no #${name} channel in ${guild.name} yet — build the server first.` };
+    const removed = await clearBotMessages(ch.id);
+    for (const embed of spec.posts) {
+      const msg = await dc<{ id: string }>("POST", `/channels/${ch.id}/messages`, { embeds: [embed] });
+      if (spec.posts.length === 1) await dc("PUT", `/channels/${ch.id}/pins/${msg.id}`).catch(() => null);
+    }
+    return { ok: true, done: [`#${name}: replaced ${removed} old post(s) with ${spec.posts.length} new one(s)`], failed: [] };
+  } catch (e) {
+    return { ok: false, done: [], failed: [], message: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+/**
+ * Post newly published, currently live offers to #limited-offers, each offer only once.
+ * Called after the admin saves; does nothing if Discord isn't set up.
+ */
+export async function discordAnnounceNewOffers(): Promise<{ posted: string[] }> {
+  try {
+    await requireAdmin();
+    const { discordConfigured, dc, targetGuild, findChannel } = await import("@/lib/discord/api");
+    if (!discordConfigured()) return { posted: [] };
+    const db = sbService();
+    const nowIso = new Date().toISOString();
+    const { data: offers } = await db
+      .from("offers")
+      .select("id, title, body, price, ends_at, image_url, pinned")
+      .eq("published", true)
+      .is("discord_posted_at", null)
+      .lte("starts_at", nowIso)
+      .gt("ends_at", nowIso);
+    if (!offers?.length) return { posted: [] };
+    const { guild } = await targetGuild();
+    const ch = guild ? await findChannel(guild.id, "limited-offers") : null;
+    if (!ch) return { posted: [] };
+    const site = process.env.NEXT_PUBLIC_SITE_URL ?? "";
+    const posted: string[] = [];
+    for (const o of offers) {
+      const price = Number(o.price);
+      const ends = Math.floor(Date.parse(o.ends_at) / 1000);
+      await dc("POST", `/channels/${ch.id}/messages`, {
+        embeds: [
+          {
+            title: `${o.pinned ? "📌 " : ""}${o.title} — $${Number.isInteger(price) ? price : price.toFixed(2)}`.slice(0, 256),
+            url: `${site}/updates`,
+            color: 0xe3b341,
+            description: `${o.body}\n\nEnds <t:${ends}:R> · Order: ${site}/updates`.slice(0, 4000),
+            ...(o.image_url ? { image: { url: o.image_url } } : {}),
+          },
+        ],
+      });
+      await db.from("offers").update({ discord_posted_at: new Date().toISOString() }).eq("id", o.id);
+      posted.push(o.title);
+    }
+    return { posted };
+  } catch (e) {
+    console.warn("[discord] offer announce failed", e instanceof Error ? e.message : e);
+    return { posted: [] };
+  }
+}

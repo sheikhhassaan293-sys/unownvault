@@ -1,7 +1,49 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { discordStatus, discordStep, type DiscordStatus } from "@/app/actions";
+import { discordRefreshChannel, discordStatus, discordStep, type DiscordStatus } from "@/app/actions";
+
+const REFRESHABLE = [
+  { name: "plans", label: "Update #plans", hint: "Weekly & monthly subscriptions" },
+  { name: "services", label: "Update #services", hint: "One-off services" },
+  { name: "faq", label: "Update #faq", hint: "FAQ answers" },
+  { name: "how-to-order", label: "Update #how-to-order", hint: "Steps, payment methods, queue" },
+  { name: "queue-status", label: "Update #queue-status", hint: "Open / paused" },
+];
+
+/** Re-post a single info channel from the current site content — nothing else in the server changes. */
+function RefreshPosts() {
+  const [busy, setBusy] = useState<string | null>(null);
+  const [result, setResult] = useState<Record<string, string>>({});
+  return (
+    <section className="panel asec" style={{ gridColumn: "1 / -1" }}>
+      <h2 className="label bare">Update a channel&apos;s info posts</h2>
+      <p className="muted" style={{ margin: "10px 0 16px", fontSize: 15 }}>
+        Changed prices or text on the website? Re-post just that channel. Only the bot&apos;s own posts there are replaced — members&apos; messages and every other channel
+        stay as they are. New offers are posted to #limited-offers automatically when you publish them.
+      </p>
+      <div className="refresh-grid">
+        {REFRESHABLE.map((c) => (
+          <div key={c.name} className="refresh-item">
+            <button
+              className={`btn sm ${c.name === "plans" ? "" : "ghost"}`}
+              disabled={!!busy}
+              onClick={async () => {
+                setBusy(c.name);
+                const r = await discordRefreshChannel(c.name);
+                setBusy(null);
+                setResult((x) => ({ ...x, [c.name]: r.ok ? `✓ ${r.done.join(" ")}` : `✕ ${r.message ?? "failed"}` }));
+              }}
+            >
+              {busy === c.name ? "Updating…" : c.label}
+            </button>
+            <span className="help">{result[c.name] ?? c.hint}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 /** Admin → Discord: preview, then rebuild the whole server in one go. */
 export function DiscordSetup() {
@@ -135,6 +177,8 @@ export function DiscordSetup() {
           Plans, services, FAQ and offers are posted from your current site content.
         </p>
       </section>
+
+      {status.guild && <RefreshPosts />}
 
       {status.guild && (
         <section className="panel asec" style={{ gridColumn: "1 / -1" }}>

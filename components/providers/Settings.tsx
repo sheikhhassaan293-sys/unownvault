@@ -9,7 +9,7 @@
  * and the public pages are refreshed for every visitor.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { refreshContent } from "@/app/actions";
+import { discordAnnounceNewOffers, refreshContent } from "@/app/actions";
 import { sb } from "@/lib/supabase/browser";
 import { LIVE } from "@/lib/supabase/env";
 import { Rich } from "../ui";
@@ -58,9 +58,12 @@ const TABLES = [
   ["faqs", "faqs", "id"],
 ] as const;
 const strip = <T extends object>(r: T) => {
-  const { updated_at, tier, ...rest } = r as T & { updated_at?: unknown; tier?: unknown };
+  // server-managed fields are never written from the admin panel
+  // (discord_posted_at: an edited offer must not be re-posted to Discord)
+  const { updated_at, tier, discord_posted_at, ...rest } = r as T & { updated_at?: unknown; tier?: unknown; discord_posted_at?: unknown };
   void updated_at;
   void tier;
+  void discord_posted_at;
   return rest;
 };
 
@@ -133,9 +136,12 @@ export function SettingsProvider({ value, mockNow, children }: { value: SiteCont
     pending.current = null;
     setSaveState("saving");
     try {
+      const offersChanged = JSON.stringify(persisted.current.offers) !== JSON.stringify(next.offers);
       await persist(persisted.current, next);
       persisted.current = next;
       await refreshContent();
+      // a newly published, live offer gets announced in Discord #limited-offers (once)
+      if (offersChanged) discordAnnounceNewOffers().catch(() => null);
       setSaveError(null);
       setSaveState(pending.current ? "saving" : "saved");
     } catch (e) {

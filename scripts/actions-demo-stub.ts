@@ -24,3 +24,10 @@ export async function discordStep(..._a: unknown[]): Promise<DiscordStepResult> 
   void _a;
   return { ok: false, done: [], failed: [], message: "demo" };
 }
+export async function discordRefreshChannel(..._a: unknown[]): Promise<DiscordStepResult> {
+  void _a;
+  return { ok: false, done: [], failed: [], message: "demo" };
+}
+export async function discordAnnounceNewOffers(): Promise<{ posted: string[] }> {
+  return { posted: [] };
+}

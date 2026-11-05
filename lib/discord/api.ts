@@ -62,3 +62,22 @@ export async function targetGuild(): Promise<{ guild: DGuild | null; count: numb
   if (wanted) return { guild: guilds.find((g) => g.id === wanted) ?? null, count: guilds.length };
   return { guild: guilds.length === 1 ? guilds[0] : null, count: guilds.length };
 }
+
+/** Find a text channel in the server by name (e.g. "plans"). */
+export async function findChannel(guildId: string, name: string): Promise<DChannel | null> {
+  const channels = await dc<DChannel[]>("GET", `/guilds/${guildId}/channels`);
+  return channels.find((c) => c.type === 0 && c.name === name) ?? null;
+}
+
+/** Remove the bot's own recent posts in a channel. Members' messages are never touched. */
+export async function clearBotMessages(channelId: string): Promise<number> {
+  const me = await dc<{ id: string }>("GET", "/users/@me");
+  const msgs = await dc<{ id: string; author: { id: string } }[]>("GET", `/channels/${channelId}/messages?limit=50`);
+  const REMOVE = "DELETE";
+  let n = 0;
+  for (const m of msgs.filter((x) => x.author.id === me.id)) {
+    await dc(REMOVE, `/channels/${channelId}/messages/${m.id}`).catch(() => null);
+    n++;
+  }
+  return n;
+}

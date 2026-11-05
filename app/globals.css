@@ -392,6 +392,9 @@
   .cat-row { display: flex; gap: 12px; align-items: center; }
   .cat-row input { flex: 1; font: inherit; color: var(--text); background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(var(--rgb), 0.22); border-radius: 4px; padding: 10px 12px; }
   .admin .f select { min-width: 150px; padding: 9px 30px 9px 10px; font-size: 14px; }
+  .refresh-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+  .refresh-item { display: grid; gap: 6px; align-content: start; }
+  .refresh-item .btn { justify-content: center; }
   /* ── events feed ───────────────────────────────── */
   .ev-sub { font-size: 11px; letter-spacing: 0.16em; margin: 26px 0 10px; }
   .ev-list { border-top: 1px solid var(--line); }
