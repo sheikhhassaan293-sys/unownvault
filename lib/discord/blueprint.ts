@@ -100,12 +100,17 @@ export function blueprint(c: Content, site: string): CategorySpec[] {
         color: ORANGE,
         url: `${site}/services`,
         fields: list.slice(0, 25).map((x) => ({
-          name: `${x.name} — ${x.price_is_from ? "from " : ""}${money(x.price)}`,
-          value: clip(`${x.description}\nDelivery: ${x.delivery_time}`, 1000),
+          name: `${x.name} — ${x.quote_only ? "quoted" : `${x.price_is_from ? "from " : ""}${money(x.price)}${x.allow_quantity ? " each" : ""}`}`,
+          value: clip(`${x.description}\n${x.quote_only ? "Ask for a quote on the website" : `Delivery: ${x.delivery_time}`}`, 1000),
         })),
       } as Embed;
     })
     .filter(Boolean) as Embed[];
+  if (serviceEmbeds.length) {
+    serviceEmbeds[serviceEmbeds.length - 1].footer = {
+      text: "⏱ Delivery times are subject to your cooldown timer (based on your last catch or PokéStop spin).",
+    };
+  }
 
   return [
     {

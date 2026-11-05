@@ -267,6 +267,44 @@ export async function discordRefreshChannel(name: string): Promise<DiscordStepRe
 }
 
 /**
+ * "Post prices & ping everyone": re-post #services and #plans from the current site content,
+ * then announce it in #announcements with @everyone (or without the ping).
+ */
+export async function discordAnnouncePrices(ping: boolean, note: string): Promise<DiscordStepResult> {
+  const done: string[] = [];
+  const failed: string[] = [];
+  for (const name of ["services", "plans"]) {
+    const r = await discordRefreshChannel(name);
+    if (r.ok) done.push(...r.done);
+    else failed.push(`#${name}: ${r.message ?? "failed"}`);
+  }
+  if (!done.length) return { ok: false, done, failed, message: failed.join(" · ") };
+  try {
+    const { dc, targetGuild, findChannel } = await import("@/lib/discord/api");
+    const { guild } = await targetGuild();
+    const ann = guild ? await findChannel(guild.id, "announcements") : null;
+    if (!ann || !guild) {
+      failed.push("#announcements not found — prices were posted, but no announcement was sent");
+      return { ok: true, done, failed };
+    }
+    const svc = await findChannel(guild.id, "services");
+    const plans = await findChannel(guild.id, "plans");
+    const site = (process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "");
+    const links = [svc && `<#${svc.id}>`, plans && `<#${plans.id}>`].filter(Boolean).join(" and ");
+    const text = (note.trim() || "New prices are live!").slice(0, 1500);
+    await dc("POST", `/channels/${ann.id}/messages`, {
+      content: `${ping ? "@everyone " : ""}${text}\n\nSee the full list in ${links || "our info channels"}${site ? ` or order at ${site}/services` : ""}.`,
+      allowed_mentions: { parse: ping ? ["everyone"] : [] },
+    });
+    done.push(`#announcements: posted${ping ? " with @everyone" : ""}`);
+    return { ok: true, done, failed };
+  } catch (e) {
+    failed.push(`#announcements: ${e instanceof Error ? e.message : String(e)}`);
+    return { ok: true, done, failed };
+  }
+}
+
+/**
  * Post newly published, currently live offers to #limited-offers, each offer only once.
  * Called after the admin saves; does nothing if Discord isn't set up.
  */

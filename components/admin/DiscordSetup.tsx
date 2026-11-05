@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { discordRefreshChannel, discordStatus, discordStep, type DiscordStatus } from "@/app/actions";
+import { discordAnnouncePrices, discordRefreshChannel, discordStatus, discordStep, type DiscordStatus } from "@/app/actions";
 
 const REFRESHABLE = [
   { name: "plans", label: "Update #plans", hint: "Weekly & monthly subscriptions" },
@@ -10,6 +10,58 @@ const REFRESHABLE = [
   { name: "how-to-order", label: "Update #how-to-order", hint: "Steps, payment methods, queue" },
   { name: "queue-status", label: "Update #queue-status", hint: "Open / paused" },
 ];
+
+/** One button: re-post #services + #plans and announce it (optionally pinging @everyone). */
+function AnnouncePrices() {
+  const [note, setNote] = useState("New prices are live! 🔥");
+  const [ping, setPing] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  return (
+    <section className="panel asec" style={{ gridColumn: "1 / -1" }}>
+      <h2 className="label bare">Post prices &amp; announce</h2>
+      <p className="muted" style={{ margin: "10px 0 16px", fontSize: 15 }}>
+        Re-posts every service and plan with the prices on the website right now, then posts your message in #announcements.
+      </p>
+      <div className="form" style={{ maxWidth: 760 }}>
+        <div className="f full">
+          <label htmlFor="ann-note">Announcement message</label>
+          <textarea id="ann-note" value={note} onChange={(e) => setNote(e.target.value)} maxLength={1500} style={{ minHeight: 80 }} />
+        </div>
+        <div className="f">
+          <label className="switch">
+            <input type="checkbox" checked={ping} onChange={(e) => setPing(e.target.checked)} />
+            <span />
+            Ping @everyone
+          </label>
+        </div>
+        <div className="f" style={{ alignSelf: "end" }}>
+          <button
+            className="btn btn-block"
+            disabled={busy}
+            onClick={async () => {
+              if (ping && !window.confirm("This will ping @everyone in your server. Send it?")) return;
+              setBusy(true);
+              setResult(null);
+              const r = await discordAnnouncePrices(ping, note);
+              setBusy(false);
+              setResult(
+                r.ok ? `✓ ${r.done.join(" · ")}${r.failed.length ? `  ✕ ${r.failed.join(" · ")}` : ""}` : `✕ ${r.message ?? r.failed.join(" · ")}`,
+              );
+            }}
+          >
+            {busy ? "Posting…" : ping ? "Post prices & ping everyone" : "Post prices"}
+          </button>
+        </div>
+      </div>
+      {result && (
+        <p className="help" style={{ marginTop: 10 }} aria-live="polite">
+          {result}
+        </p>
+      )}
+    </section>
+  );
+}
 
 /** Re-post a single info channel from the current site content — nothing else in the server changes. */
 function RefreshPosts() {
@@ -178,6 +230,7 @@ export function DiscordSetup() {
         </p>
       </section>
 
+      {status.guild && <AnnouncePrices />}
       {status.guild && <RefreshPosts />}
 
       {status.guild && (
