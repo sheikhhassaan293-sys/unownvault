@@ -66,7 +66,9 @@ export async function createCheckout(kind: "subscription" | "service" | "offer" 
   } catch (e) {
     const err = e as { message?: string; statusCode?: number; body?: unknown };
     console.error("[checkout] failed", { kind, id, message: err?.message, status: err?.statusCode, body: JSON.stringify(err?.body ?? null).slice(0, 800) });
-    return { ok: false, error: err?.message ? `Checkout error: ${err.message}` : "Couldn't start checkout" };
+    // show the buyer Whop's own sentence, not the raw HTTP dump
+    const whopMsg = (err?.body as { error?: { message?: string } } | undefined)?.error?.message ?? err?.message?.match(/"message":\s*"([^"]+)"/)?.[1];
+    return { ok: false, error: whopMsg ? `Checkout couldn't start: ${whopMsg}. Please try again or message us on Discord.` : "Couldn't start checkout — please try again or message us on Discord." };
   }
 }
 

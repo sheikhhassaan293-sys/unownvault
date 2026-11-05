@@ -46,12 +46,52 @@ export async function priceOf(kind: CheckoutKind, id: string, userId: string): P
   const { data } = await db.from("custom_requests").select("id, user_id, quote_amount, status, request_type, target").eq("id", id).single();
   if (!data || data.user_id !== userId) throw new Error("Request not found");
   if (data.status !== "quoted" || !data.quote_amount) throw new Error("There's no quote to pay yet");
-  return { name: `Custom request #${data.id} — ${data.request_type}`, price: Number(data.quote_amount), plan: null, period: null };
+  return { name: `Custom request ${data.id}`, price: Number(data.quote_amount), plan: null, period: null };
+}
+
+/** Whop allows at most 30 characters in a plan title. */
+const whopTitle = (t: string) => (t.length <= 30 ? t : t.slice(0, 29).trimEnd() + "…");
+
+const PRODUCT_TITLE = "UnownVault";
+let productIdCache: string | null = null;
+
+/**
+ * Whop needs every plan to belong to a product (subscriptions fail without one).
+ * Uses WHOP_PRODUCT_ID if set; otherwise finds our hidden "UnownVault" product, or creates it once.
+ */
+async function ensureProductId(): Promise<string> {
+  if (process.env.WHOP_PRODUCT_ID) return process.env.WHOP_PRODUCT_ID;
+  if (productIdCache) return productIdCache;
+  const client = whop();
+  const account_id = process.env.WHOP_COMPANY_ID;
+  try {
+    const page = await client.products.list({ account_id, query: PRODUCT_TITLE } as Parameters<typeof client.products.list>[0]);
+    for await (const p of page) {
+      const meta = (p.metadata ?? {}) as Record<string, unknown>;
+      if (meta.unownvault === true || p.title === PRODUCT_TITLE) {
+        productIdCache = p.id;
+        return p.id;
+      }
+    }
+  } catch (e) {
+    console.warn("[whop] couldn't list products", e instanceof Error ? e.message : e);
+  }
+  const created = await client.products.create({
+    account_id,
+    title: PRODUCT_TITLE,
+    headline: "Pokémon GO hunts, dust & raid services",
+    visibility: "hidden",
+    metadata: { unownvault: true },
+  } as Parameters<typeof client.products.create>[0]);
+  console.info("[whop] created product", created.id);
+  productIdCache = created.id;
+  return created.id;
 }
 
 export async function createWhopCheckout(kind: CheckoutKind, id: string, userId: string, returnUrl: string) {
   const item = await priceOf(kind, id, userId);
   const metadata: CheckoutMeta = { site_user_id: userId, kind, item_id: id, item_name: item.name };
+  const product_id = item.plan ? undefined : await ensureProductId();
   const res = await whop().checkoutConfigurations.create({
     account_id: process.env.WHOP_COMPANY_ID,
     metadata,
@@ -60,9 +100,9 @@ export async function createWhopCheckout(kind: CheckoutKind, id: string, userId:
       ? { variant_id: item.plan }
       : {
           variant: {
-            title: item.name,
+            title: whopTitle(item.name),
             currency: "usd",
-            product_id: process.env.WHOP_PRODUCT_ID || undefined,
+            product_id,
             visibility: "hidden",
             ...(item.period
               ? { billing_type: "renewal", billing_period: item.period === "weekly" ? 7 : 30, initial_price: item.price, renewal_price: item.price }
