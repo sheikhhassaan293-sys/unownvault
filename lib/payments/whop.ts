@@ -105,7 +105,8 @@ export async function createWhopCheckout(kind: CheckoutKind, id: string, userId:
             product_id,
             visibility: "hidden",
             ...(item.period
-              ? { billing_type: "renewal", billing_period: item.period === "weekly" ? 7 : 30, initial_price: item.price, renewal_price: item.price }
+              ? // renewal: Whop charges initial_price as an EXTRA sign-up fee on top of the first renewal, so it must be 0
+                { billing_type: "renewal", billing_period: item.period === "weekly" ? 7 : 30, initial_price: 0, renewal_price: item.price }
               : { billing_type: "one_time", initial_price: item.price }),
           },
         }),
