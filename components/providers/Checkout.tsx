@@ -12,15 +12,8 @@ import { useMoney } from "./Currency";
 import { useSettings } from "./Settings";
 import { newId, useSession } from "./Session";
 import { useThemedNavigate } from "./Transition";
-import dynamic from "next/dynamic";
-import { confirmCheckout, createCheckout } from "@/app/actions";
+import { createCheckout } from "@/app/actions";
 import { sb } from "@/lib/supabase/browser";
-
-// Whop's embedded checkout (an iframe) — only loaded when someone actually pays
-const WhopCheckoutEmbed = dynamic(() => import("@whop/checkout/react").then((m) => m.WhopCheckoutEmbed), {
-  ssr: false,
-  loading: () => <div className="embed">Loading secure checkout…</div>,
-});
 
 type Step = "summary" | "whop" | "manual" | "manual-done" | "success" | "signin";
 const CheckoutCtx = createContext<(item: CheckoutItem) => void>(() => {});
@@ -61,21 +54,31 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
   const [proof, setProof] = useState<File | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
   const { user, addOrder, updateRequest, live, reload } = useSession();
-  const [session, setSession] = useState<{ id: string; url: string | null } | null>(null);
   const [starting, setStarting] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
 
-  /** Live: ask the server for a Whop checkout for this item, then show it inside the dialog. */
+  /**
+   * Live: ask the server for a Whop checkout for this item, then send the buyer to Whop's
+   * secure checkout page. Whop sends them back to /checkout/success when they've paid.
+   */
   async function startWhop() {
     if (!live) return setStep("whop");
     if (!user) return setStep("signin");
     setStarting(true);
     setPayError(null);
-    const r = await createCheckout(item.kind, item.id, window.location.href);
-    setStarting(false);
-    if (!r.ok) return r.error === "signin" ? setStep("signin") : setPayError(r.error);
-    setSession({ id: r.sessionId, url: r.purchaseUrl });
-    setStep("whop");
+    const r = await createCheckout(item.kind, item.id, `${window.location.origin}/checkout/success`);
+    if (!r.ok) {
+      setStarting(false);
+      return r.error === "signin" ? setStep("signin") : setPayError(r.error);
+    }
+    if (!r.purchaseUrl) {
+      setStarting(false);
+      return setPayError("Couldn't open checkout — please try again or message us on Discord.");
+    }
+    try {
+      sessionStorage.setItem("uv-checkout", JSON.stringify({ name: item.name, kind: item.kind, startedAt: Date.now() }));
+    } catch {}
+    window.location.href = r.purchaseUrl;
   }
 
   /** Live manual payment: upload the screenshot privately, then create an "awaiting confirmation" order. */
@@ -97,13 +100,6 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
     setStep("manual-done");
   }
 
-  /** Whop says the payment went through → record the order now and show the success popup. */
-  async function onWhopComplete(receiptId: string | undefined) {
-    setStep("success");
-    const r = receiptId ? await confirmCheckout(receiptId) : { orderId: null, status: "processing" };
-    setOrderId(r.orderId ?? receiptId ?? "processing");
-    reload();
-  }
   const navigate = useThemedNavigate();
 
   /** Phase 2: this runs from Whop's onComplete callback; the webhook makes it official server-side. */
@@ -203,6 +199,11 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
             <button className="btn btn-block" disabled={settings.maintenance || starting} onClick={startWhop}>
               {settings.maintenance ? "Checkout paused (maintenance)" : starting ? "Opening secure checkout…" : `Pay ${charged}`}
             </button>
+            {live && (
+              <p className="mono dim" style={{ fontSize: 12, textAlign: "center", marginTop: 10 }}>
+                You&apos;ll pay on Whop&apos;s secure page, then come straight back here.
+              </p>
+            )}
             {payError && (
               <p className="err mono" style={{ marginTop: 10, fontSize: 12, color: "#ff8a8a" }}>
                 {payError}
@@ -239,17 +240,6 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
             >
               Create an account
             </button>
-          </div>
-        )}
-
-        {step === "whop" && live && session && (
-          <div className="whop-embed">
-            <WhopCheckoutEmbed sessionId={session.id} theme="dark" skipRedirect onComplete={(_plan: string, receipt: string | undefined) => onWhopComplete(receipt)} />
-            {session.url && (
-              <a className="linkish" href={session.url} target="_blank" rel="noopener noreferrer" style={{ display: "block", textAlign: "center", marginTop: 12 }}>
-                Checkout not loading? Open it in a new tab
-              </a>
-            )}
           </div>
         )}
 
