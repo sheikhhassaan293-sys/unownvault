@@ -33,7 +33,15 @@ export async function syncAdminRole(): Promise<"admin" | "user" | null> {
     .split(",")
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
-  const isOwner = !!user.email && admins.includes(user.email.toLowerCase()) && !!user.email_confirmed_at;
+  // Email confirmation is switched off (so Discord accounts without a verified email can sign in),
+  // which means a "confirmed" email proves nothing. Admin is only granted to an email-password
+  // account that already existed before that switch — never to a new or Discord account.
+  const ADMIN_CUTOFF = Date.parse("2026-11-05T00:00:00Z");
+  const isOwner =
+    !!user.email &&
+    admins.includes(user.email.toLowerCase()) &&
+    user.app_metadata?.provider === "email" &&
+    Date.parse(user.created_at) < ADMIN_CUTOFF;
   const { data } = await db.from("profiles").select("role").eq("id", user.id).single();
   if (isOwner && data?.role !== "admin") {
     await sbService().from("profiles").update({ role: "admin" }).eq("id", user.id);
