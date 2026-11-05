@@ -13,9 +13,10 @@ import { useOrdersOpen, useSettings } from "./Settings";
 import { newId, useSession } from "./Session";
 import { useThemedNavigate } from "./Transition";
 import { createCheckout } from "@/app/actions";
+import { PriorityPicker, PrioritySummary, usePokedex } from "../PriorityPicker";
 import { sb } from "@/lib/supabase/browser";
 
-type Step = "summary" | "whop" | "manual" | "manual-done" | "success" | "signin";
+type Step = "summary" | "whop" | "manual" | "manual-done" | "success" | "signin" | "priorities";
 const CheckoutCtx = createContext<(item: CheckoutItem) => void>(() => {});
 export const useCheckout = () => useContext(CheckoutCtx);
 
@@ -61,7 +62,8 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
   const [txn, setTxn] = useState("");
   const [proof, setProof] = useState<File | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
-  const { user, addOrder, updateRequest, live, reload } = useSession();
+  const { user, addOrder, updateRequest, live, reload, priorities, savePriorities } = useSession();
+  const { nameOf } = usePokedex();
   const [starting, setStarting] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
 
@@ -128,6 +130,7 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
       external_payment_id: null,
       proof_url: null,
       created_at: new Date().toISOString(),
+      priorities,
     });
     if (item.kind === "custom") updateRequest(item.id, { status: status === "awaiting_confirmation" ? "accepted" : "in_progress" });
     setOrderId(id);
@@ -165,7 +168,7 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
         role="dialog"
         aria-modal="true"
         aria-labelledby="co-title"
-        className="dlg"
+        className={`dlg ${step === "priorities" ? "wide" : ""}`}
         initial={{ y: 24, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 16, opacity: 0 }}
@@ -195,8 +198,35 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
           </p>
         )}
 
+        {step === "priorities" && (
+          <PriorityPicker
+            value={priorities}
+            focus={item.priorityKinds}
+            includes={item.priorityIncludes}
+            onCancel={() => setStep("summary")}
+            onSave={async (p) => {
+              const r = await savePriorities(p);
+              if (!r.error) setStep("summary");
+              return r;
+            }}
+          />
+        )}
+
         {step === "summary" && (
           <>
+            {item.priorityKinds?.length ? (
+              <div className="pri-box">
+                <div className="head-row" style={{ alignItems: "center", gap: 10 }}>
+                  <span className="mono dim" style={{ fontSize: 11, letterSpacing: ".14em" }}>
+                    YOUR PRIORITY POKÉMON
+                  </span>
+                  <button className="linkish" onClick={() => (live && !user ? setStep("signin") : setStep("priorities"))}>
+                    {item.priorityKinds.some((k) => priorities[k]?.length) ? "Edit" : "Choose"}
+                  </button>
+                </div>
+                <PrioritySummary value={Object.fromEntries(item.priorityKinds.map((k) => [k, priorities[k] ?? []]))} nameOf={nameOf} />
+              </div>
+            ) : null}
             <div className="paychips">
               <span>CARD</span>
               <span>APPLE PAY</span>

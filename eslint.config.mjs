@@ -12,12 +12,14 @@ const eslintConfig = defineConfig([
     "out/**",
     "scripts/actions-demo-stub.ts",
     "scripts/live-content-demo-stub.ts",
+    "scripts/game-events-demo-stub.ts",
     "build/**",
     "next-env.d.ts",
     "preview/**",
     "out/**",
     "scripts/actions-demo-stub.ts",
     "scripts/live-content-demo-stub.ts",
+    "scripts/game-events-demo-stub.ts",
   ]),
 ]);
 

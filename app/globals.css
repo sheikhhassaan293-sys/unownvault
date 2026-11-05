@@ -392,6 +392,36 @@
   .cat-row { display: flex; gap: 12px; align-items: center; }
   .cat-row input { flex: 1; font: inherit; color: var(--text); background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(var(--rgb), 0.22); border-radius: 4px; padding: 10px 12px; }
   .admin .f select { min-width: 150px; padding: 9px 30px 9px 10px; font-size: 14px; }
+  /* ── events feed ───────────────────────────────── */
+  .ev-sub { font-size: 11px; letter-spacing: 0.16em; margin: 26px 0 10px; }
+  .ev-list { border-top: 1px solid var(--line); }
+  .ev { display: grid; grid-template-columns: 170px 1fr auto; gap: 18px; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--line); }
+  .ev .badge { justify-self: start; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .ev .h3 { font-size: 18px; }
+  .ev .mono { font-size: 12px; margin-top: 4px; letter-spacing: 0.04em; }
+  .ev-act { display: flex; align-items: center; gap: 14px; }
+  /* ── priority picker ───────────────────────────── */
+  .picker-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .pick-results { list-style: none; margin: 10px 0 6px; padding: 0; max-height: 260px; overflow-y: auto; border: 1px solid var(--line); border-radius: 4px; }
+  .pick-results li { border-bottom: 1px solid var(--line); }
+  .pick-results li:last-child { border-bottom: 0; }
+  .pick-results button { width: 100%; display: flex; gap: 10px; align-items: center; text-align: left; padding: 10px 12px; background: none; border: 0; color: var(--text); font-size: 15px; min-height: 44px; }
+  .pick-results button:hover:not(:disabled) { background: rgba(var(--rgb), 0.08); }
+  .pick-results button:disabled { opacity: 0.5; }
+  .pick-results button .acc { margin-left: auto; font-family: var(--fm); }
+  .pick-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; max-height: 300px; overflow-y: auto; }
+  .pick-list li { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 15px; }
+  .pick-list .nm { flex: 1; }
+  .pick-list button { background: none; border: 1px solid rgba(var(--text-rgb), 0.14); border-radius: 3px; color: var(--muted); width: 32px; height: 32px; font-family: var(--fm); }
+  .pick-list button:hover:not(:disabled) { color: var(--text); border-color: var(--acc); }
+  .pick-list button:disabled { opacity: 0.3; }
+  .pri-summary p { font-size: 15px; margin: 4px 0; }
+  .pri-details { margin-top: 6px; }
+  .pri-details summary { cursor: pointer; list-style: none; font-size: 12px; }
+  .pri-details summary::-webkit-details-marker { display: none; }
+  .pri-summary .mono { font-size: 11px; letter-spacing: 0.12em; margin-right: 6px; }
+  .dlg.wide { max-width: 760px; }
+  .pri-box { border: 1px solid var(--line); border-radius: 4px; padding: 12px 14px; margin-bottom: 18px; }
   .toast { position: fixed; left: 50%; bottom: 28px; z-index: 80; background: var(--bg2); border: 1px solid var(--acc); padding: 12px 18px; border-radius: 4px; font-family: var(--fm); font-size: 13px; max-width: calc(100vw - 32px); pointer-events: none; }
 
   /* ── auth / account (neutral) ────────────────── */
@@ -480,6 +510,9 @@
   .tier.rec .price b { font-size: 54px; }
   .svc.feat .feat-mark { width: 64px; height: 64px; }
   .otable .hide-m { display: none; }
+  .picker-cols { grid-template-columns: 1fr; }
+  .ev { grid-template-columns: 1fr; gap: 8px; }
+  .ev-act { justify-content: space-between; }
   .form.fx { grid-template-columns: 1fr 1fr; }
   .atabs { top: 56px; overflow-x: auto; flex-wrap: nowrap; }
   .atabs button { white-space: nowrap; }

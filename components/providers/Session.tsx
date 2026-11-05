@@ -12,7 +12,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { syncAdminRole } from "@/app/actions";
 import { sb } from "@/lib/supabase/browser";
 import { LIVE } from "@/lib/supabase/env";
-import { normalizeRows, type CustomRequest, type Order, type SubscriptionTier, type UserSubscription } from "@/lib/types";
+import { normalizeRows, type CustomRequest, type Order, type Priorities, type SubscriptionTier, type UserSubscription } from "@/lib/types";
 
 export type DemoUser = {
   id?: string;
@@ -48,11 +48,15 @@ type Ctx = {
   sendRequest: (r: NewRequest) => Promise<CustomRequest>;
   updateRequest: (id: string, patch: Partial<CustomRequest>) => Promise<void>;
   reload: () => Promise<void>;
+  /** the signed-in customer's priority Pokémon wishlist */
+  priorities: Priorities;
+  savePriorities: (p: Priorities) => Promise<Result>;
 };
 
 const KEY = "uv-demo-session";
 const ORD_KEY = "uv-demo-orders-v1";
 const REQ_KEY = "uv-demo-requests-v2";
+const PRI_KEY = "uv-demo-priorities";
 const SessionCtx = createContext<Ctx | null>(null);
 
 function load<T>(key: string, fallback: T): T {
@@ -87,6 +91,7 @@ export function SessionProvider({ demoOrders, demoRequests, children }: { demoOr
   const [requests, setRequests] = useState<CustomRequest[]>(LIVE ? [] : demoRequests);
   const [subscriptions, setSubs] = useState<Sub[]>([]);
   const [ready, setReady] = useState(false);
+  const [priorities, setPriorities] = useState<Priorities>({});
 
   /* ───────────── live: load profile + own data ───────────── */
   const loadLive = useCallback(async () => {
@@ -102,7 +107,8 @@ export function SessionProvider({ demoOrders, demoRequests, children }: { demoOr
       return;
     }
     const role = (await syncAdminRole().catch(() => null)) ?? "user";
-    const { data: profile } = await db.from("profiles").select("username, role").eq("id", u.id).single();
+    const { data: profile } = await db.from("profiles").select("username, role, priorities").eq("id", u.id).single();
+    setPriorities((profile?.priorities as Priorities) ?? {});
     const provider = (u.app_metadata?.provider as DemoUser["provider"]) ?? "email";
     setUser({ id: u.id, username: profile?.username ?? "", email: u.email ?? null, provider, role: (profile?.role as "admin" | "user") ?? role });
     setNeedsUsername(!profile?.username);
@@ -122,6 +128,7 @@ export function SessionProvider({ demoOrders, demoRequests, children }: { demoOr
       setUser(load<DemoUser | null>(KEY, null));
       setOrders(load(ORD_KEY, demoOrders));
       setRequests(load(REQ_KEY, demoRequests));
+      setPriorities(load<Priorities>(PRI_KEY, {}));
       setReady(true);
       return;
     }
@@ -286,6 +293,23 @@ export function SessionProvider({ demoOrders, demoRequests, children }: { demoOr
     }
   }, []);
 
+  const savePriorities = useCallback(async (p: Priorities): Promise<Result> => {
+    const clean: Priorities = {};
+    for (const [k, v] of Object.entries(p)) if (Array.isArray(v) && v.length) clean[k as keyof Priorities] = Array.from(new Set(v)).slice(0, 40);
+    if (!LIVE) {
+      setPriorities(clean);
+      store(PRI_KEY, clean);
+      return {};
+    }
+    const db = sb();
+    const { data: auth } = await db.auth.getUser();
+    if (!auth.user) return { error: "Please log in to save your priorities" };
+    const { error } = await db.from("profiles").update({ priorities: clean }).eq("id", auth.user.id);
+    if (error) return { error: error.message };
+    setPriorities(clean);
+    return {};
+  }, []);
+
   const value = useMemo<Ctx>(
     () => ({
       live: LIVE,
@@ -309,8 +333,10 @@ export function SessionProvider({ demoOrders, demoRequests, children }: { demoOr
       sendRequest,
       updateRequest,
       reload: LIVE ? loadLive : async () => {},
+      priorities,
+      savePriorities,
     }),
-    [user, needsUsername, ready, signIn, signUpEmail, signInEmail, signInDiscord, checkUsername, claimUsername, signOut, subscriptions, orders, addOrder, updateOrder, markReceived, requests, sendRequest, updateRequest, loadLive],
+    [user, needsUsername, ready, signIn, signUpEmail, signInEmail, signInDiscord, checkUsername, claimUsername, signOut, subscriptions, orders, addOrder, updateOrder, markReceived, requests, sendRequest, updateRequest, loadLive, priorities, savePriorities],
   );
   return <SessionCtx.Provider value={value}>{children}</SessionCtx.Provider>;
 }

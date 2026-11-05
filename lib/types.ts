@@ -99,6 +99,8 @@ export type Order = {
   external_payment_id: string | null;
   proof_url: string | null;
   created_at: string;
+  /** copy of the buyer's priority Pokémon when they ordered */
+  priorities?: Priorities | null;
 };
 
 export type UserSubscription = {
@@ -180,3 +182,13 @@ export function normalizeRows<T extends Record<string, unknown>>(rows: T[] | nul
     return o as T;
   });
 }
+
+/** A customer's priority Pokémon (National Dex numbers), in the order they want them. */
+export type PriorityKind = "shiny" | "shundo" | "hundo";
+export type Priorities = Partial<Record<PriorityKind, number[]>>;
+export const PRIORITY_KINDS: { key: PriorityKind; label: string; hint: string }[] = [
+  { key: "shiny", label: "Shinies", hint: "Shiny targets you want first" },
+  { key: "shundo", label: "Shundos", hint: "Shiny + perfect stats" },
+  { key: "hundo", label: "Hundos", hint: "Perfect stats (any colour)" },
+];
+export const PRIORITY_MAX = 40;

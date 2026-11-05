@@ -19,6 +19,10 @@ export type CheckoutItem = {
   priceIsFrom?: boolean;
   period?: "weekly" | "monthly";
   whopPlanId?: string | null;
+  /** show the priority Pokémon picker at checkout, for these kinds */
+  priorityKinds?: ("shiny" | "shundo" | "hundo")[];
+  /** how many of each the plan includes (shown as a guide in the picker) */
+  priorityIncludes?: Partial<Record<"shiny" | "shundo" | "hundo", number>>;
 };
 
 export type CheckoutSession =

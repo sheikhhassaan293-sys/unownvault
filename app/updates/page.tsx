@@ -1,16 +1,19 @@
 import type { Metadata } from "next";
+import { EventsFeed } from "@/components/pages/EventsFeed";
 import { OfferFeed } from "@/components/pages/OfferFeed";
+import { getGameEvents } from "@/lib/game-events";
 import { CurrencySwitch } from "@/components/providers/Currency";
 import { CopyText } from "@/components/providers/Settings";
 import { Reveal } from "@/components/ui";
 
 export const metadata: Metadata = {
   title: "Updates & limited offers",
-  description: "Limited drops. Clock's running. Event bundles, raid hour packages and stardust deals — each with a live countdown.",
+  description: "Limited drops and what's on in Pokémon GO right now — event bundles, raid hours, Community Days and Spotlight Hours, updated automatically.",
   alternates: { canonical: "/updates" },
 };
 
-export default function UpdatesPage() {
+export default async function UpdatesPage() {
+  const events = await getGameEvents();
   return (
     <div className="page">
       <div className="head">
@@ -27,6 +30,7 @@ export default function UpdatesPage() {
         </div>
       </div>
       <OfferFeed />
+      <EventsFeed events={events} />
     </div>
   );
 }

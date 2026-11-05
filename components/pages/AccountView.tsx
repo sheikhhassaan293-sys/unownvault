@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { SubscriptionTier, UserSubscription } from "@/lib/types";
 import { Price } from "../providers/Currency";
 import { ORDER_STATUS, useSession } from "../providers/Session";
@@ -7,13 +8,16 @@ import { useToast } from "../providers/Toast";
 import { Link, useThemedNavigate } from "../providers/Transition";
 import { daysUntil, Reveal, useNow } from "../ui";
 import { RequestRow } from "./RequestForm";
+import { PriorityPicker, PrioritySummary, usePokedex } from "../PriorityPicker";
 
 type Sub = UserSubscription & { tier: SubscriptionTier | null };
 
 const fmt = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
 export function AccountView({ subs }: { subs: Sub[] }) {
-  const { user, ready, signOut, orders, requests, markReceived, live, subscriptions } = useSession();
+  const { user, ready, signOut, orders, requests, markReceived, live, subscriptions, priorities, savePriorities } = useSession();
+  const { nameOf } = usePokedex();
+  const [editing, setEditing] = useState(false);
   const toast = useToast();
   const navigate = useThemedNavigate();
   const now = useNow(60_000);
@@ -169,6 +173,45 @@ export function AccountView({ subs }: { subs: Sub[] }) {
           </div>
         </Reveal>
       </div>
+
+      <Reveal className="panel acct-card" style={{ marginTop: 20 }}>
+        <div className="head-row" style={{ alignItems: "center", marginBottom: 10 }}>
+          <h2 className="label bare">Priority Pokémon</h2>
+          <button className="btn ghost sm" onClick={() => setEditing(true)}>
+            {Object.values(priorities).some((l) => l?.length) ? "Edit" : "Choose"}
+          </button>
+        </div>
+        <p className="help" style={{ marginBottom: 10 }}>
+          The shinies, shundos and hundos you want first. We work through them top to bottom for your plan and hunt orders.
+        </p>
+        <PrioritySummary value={priorities} nameOf={nameOf} />
+      </Reveal>
+
+      {editing && (
+        <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && setEditing(false)}>
+          <div className="dlg wide" role="dialog" aria-modal="true" aria-label="Priority Pokémon">
+            <button className="x" onClick={() => setEditing(false)} aria-label="Close">
+              ×
+            </button>
+            <div className="label">Priority Pokémon</div>
+            <h3 className="h3" style={{ marginBottom: 14 }}>
+              What should we hunt first?
+            </h3>
+            <PriorityPicker
+              value={priorities}
+              onCancel={() => setEditing(false)}
+              onSave={async (p) => {
+                const r = await savePriorities(p);
+                if (!r.error) {
+                  setEditing(false);
+                  toast("Priorities saved");
+                }
+                return r;
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       <section className="sec" style={{ marginTop: 60 }} aria-labelledby="req-h">
         <div className="head-row head">

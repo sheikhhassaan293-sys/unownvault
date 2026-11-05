@@ -7,6 +7,7 @@ STASH=$(mktemp -d)
 restore() {
   [ -f "$STASH/_root/actions.ts.bak" ] && mv "$STASH/_root/actions.ts.bak" app/actions.ts
   [ -f "$STASH/_root/live-content.ts.bak" ] && mv "$STASH/_root/live-content.ts.bak" lib/live-content.ts
+  [ -f "$STASH/_root/game-events.ts.bak" ] && mv "$STASH/_root/game-events.ts.bak" lib/game-events.ts
   if [ -d "$STASH/_root" ]; then (cd "$STASH/_root" && find . -type f) | while read -r f; do mkdir -p "$(dirname "$f")"; mv "$STASH/_root/$f" "$f"; done; rm -rf "$STASH/_root"; fi
   (cd "$STASH" && find . -type f) | while read -r f; do mkdir -p "app/$(dirname "$f")"; mv "$STASH/$f" "app/$f"; done; rm -rf "$STASH"
 }
@@ -16,6 +17,7 @@ trap restore EXIT
 for f in proxy.ts app/auth app/api; do [ -e "$f" ] && mkdir -p "$STASH/_root/$(dirname "$f")" && mv "$f" "$STASH/_root/$f"; done
 cp app/actions.ts "$STASH/_root/actions.ts.bak" && cp scripts/actions-demo-stub.ts app/actions.ts
 cp lib/live-content.ts "$STASH/_root/live-content.ts.bak" && cp scripts/live-content-demo-stub.ts lib/live-content.ts
+cp lib/game-events.ts "$STASH/_root/game-events.ts.bak" && sed "s#\./game-events-source#./game-events-source#" scripts/game-events-demo-stub.ts > lib/game-events.ts
 rm -rf out preview
 NEXT_PUBLIC_STATIC_EXPORT=1 npx next build
 mv out preview

@@ -11,6 +11,12 @@ import { Reveal } from "../ui";
 
 const EASE = [0.2, 0.7, 0.2, 1] as const;
 
+/** "8 (new to your Pokédex)" → 8 ; "—" → undefined */
+const firstNum = (v?: string) => {
+  const m = v?.match(/\d+/);
+  return m ? Number(m[0]) : undefined;
+};
+
 /** Shiny / shundo items depend on what's around — flag them and explain in the footnote. */
 const DEPENDS = /shiny|shundo/i;
 const flag = (text: string) =>
@@ -109,6 +115,8 @@ export function TierSwitcher() {
                   currency: t.currency,
                   period,
                   whopPlanId: t.whop_plan_id,
+                  priorityKinds: ["shiny", "shundo", "hundo"],
+                  priorityIncludes: { shiny: firstNum(t.compare["Shiny hunts"]), shundo: firstNum(t.compare["Shundos"]), hundo: firstNum(t.compare["Hundo hunts"]) },
                 }}
               >
                 Subscribe

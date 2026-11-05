@@ -11,6 +11,7 @@ import { useContent, type SiteContent } from "../providers/Settings";
 import { useToast } from "../providers/Toast";
 import { Link } from "../providers/Transition";
 import { FieldRow, type Field } from "./fields";
+import { PrioritySummary, usePokedex } from "../PriorityPicker";
 import { DiscordSetup } from "./DiscordSetup";
 import { ListEditor } from "./ListEditor";
 
@@ -531,6 +532,7 @@ function CategoryEditor({
 
 function OrdersAdmin({ orders, onStatus }: { orders: Order[]; onStatus: (id: string, s: Order["status"]) => void }) {
   const [filter, setFilter] = useState<"open" | "all">("open");
+  const { nameOf } = usePokedex();
   const open = (o: Order) => !["completed", "refunded"].includes(o.status);
   const list = orders.filter((o) => filter === "all" || open(o));
   return (
@@ -575,6 +577,12 @@ function OrdersAdmin({ orders, onStatus }: { orders: Order[]; onStatus: (id: str
                   </td>
                   <td>
                     {o.item_name}
+                    {o.priorities && Object.values(o.priorities).some((l) => l?.length) && (
+                      <details className="pri-details">
+                        <summary className="linkish">Priority Pokémon</summary>
+                        <PrioritySummary value={o.priorities} nameOf={nameOf} />
+                      </details>
+                    )}
                     {o.transaction_ref && (
                       <>
                         <br />

@@ -8,6 +8,15 @@ import { BuyButton } from "../providers/Checkout";
 import { Price } from "../providers/Currency";
 import { ShardBullet } from "../ShardBullet";
 
+/** Which priority tabs a service's checkout shows (shiny / shundo / hundo hunts). */
+function priorityKindsFor(category: string, name: string): ("shiny" | "shundo" | "hundo")[] | undefined {
+  const n = name.toLowerCase();
+  if (category === "shundo" || n.includes("shundo")) return ["shundo"];
+  if (n.includes("hundo")) return ["hundo"];
+  if (category === "shiny" || n.includes("shiny")) return ["shiny"];
+  return undefined;
+}
+
 export function ServiceGrid() {
   const { content } = useContent();
   const ordersOpen = useOrdersOpen();
@@ -86,6 +95,7 @@ export function ServiceGrid() {
                       currency: s.currency,
                       priceIsFrom: s.price_is_from,
                       whopPlanId: s.whop_plan_id,
+                      priorityKinds: priorityKindsFor(s.category, s.name),
                     }}
                   >
                     Order
