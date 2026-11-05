@@ -124,6 +124,8 @@ export type Order = {
   priorities?: Priorities | null;
   quantity?: number;
   cooldown?: Cooldown | null;
+  /** when it was announced in Discord (#recent-orders) */
+  discord_posted_at?: string | null;
 };
 
 export type UserSubscription = {

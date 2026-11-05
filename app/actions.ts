@@ -266,6 +266,17 @@ export async function discordRefreshChannel(name: string): Promise<DiscordStepRe
   }
 }
 
+/** Admin → Orders: post an order to Discord by hand (e.g. one made before auto-posting, or a confirmed manual payment). */
+export async function discordAnnounceOrder(orderId: string): Promise<{ ok: boolean; message: string }> {
+  try {
+    await requireAdmin();
+    const { announceOrder } = await import("@/lib/discord/orders");
+    return await announceOrder(orderId);
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 /**
  * "Post prices & ping everyone": re-post #services and #plans from the current site content,
  * then announce it in #announcements with @everyone (or without the ping).

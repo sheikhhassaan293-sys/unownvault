@@ -254,6 +254,7 @@ export function blueprint(c: Content, site: string): CategorySpec[] {
       name: "PROOF",
       access: "info",
       channels: [
+        { name: "recent-orders", topic: "Live feed of new orders 🛒", access: "info", posts: [] },
         { name: "completed-orders", topic: "Delivered hunts, posted by staff", access: "info", posts: [] },
         {
           name: "reviews",

@@ -185,6 +185,11 @@ export async function recordWhopPayment(paymentId: string) {
     await db.from("custom_requests").update({ status: "in_progress" }).eq("id", meta.item_id);
   }
   if (kind === "subscription" && p.membership_id) await syncWhopMembership(p.membership_id);
+  // a brand-new order (not a duplicate webhook): announce it in Discord; never block the payment on it
+  if (order?.id) {
+    const { announceOrder } = await import("@/lib/discord/orders");
+    await announceOrder(order.id).catch((e) => console.warn("[discord] order announce failed", e instanceof Error ? e.message : e));
+  }
   return { order, status: p.status };
 }
 

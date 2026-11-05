@@ -13,6 +13,7 @@ import { Link } from "../providers/Transition";
 import { FieldRow, type Field } from "./fields";
 import { PrioritySummary, usePokedex } from "../PriorityPicker";
 import { DiscordSetup } from "./DiscordSetup";
+import { discordAnnounceOrder } from "@/app/actions";
 import { ListEditor } from "./ListEditor";
 
 const TABS = ["Site & text", "Plans", "Services", "Offers", "FAQ", "Orders", "Requests", "Discord", "Backup"] as const;
@@ -540,6 +541,31 @@ function CategoryEditor({
   );
 }
 
+/** Orders made before auto-posting, or manual payments you've confirmed: post them to Discord by hand. */
+function PostOrderButton({ o }: { o: Order }) {
+  const [state, setState] = useState<string | null>(o.discord_posted_at ? "✓ In Discord" : null);
+  const [busy, setBusy] = useState(false);
+  if (!LIVE || ["refunded", "awaiting_confirmation"].includes(o.status)) return null;
+  if (state?.startsWith("✓")) return <small className="mono dim">{state}</small>;
+  return (
+    <>
+      <button
+        className="linkish"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          const r = await discordAnnounceOrder(o.id);
+          setBusy(false);
+          setState(r.ok ? "✓ In Discord" : `✕ ${r.message}`);
+        }}
+      >
+        {busy ? "Posting…" : "Post to Discord"}
+      </button>
+      {state && <small className="err"> {state}</small>}
+    </>
+  );
+}
+
 function OrdersAdmin({ orders, onStatus }: { orders: Order[]; onStatus: (id: string, s: Order["status"]) => void }) {
   const [filter, setFilter] = useState<"open" | "all">("open");
   const { nameOf } = usePokedex();
@@ -593,6 +619,8 @@ function OrdersAdmin({ orders, onStatus }: { orders: Order[]; onStatus: (id: str
                         <small className={`mono ${o.cooldown.has ? "acc" : "dim"}`}>{cooldownText(o.cooldown)}</small>
                       </>
                     )}
+                    <br />
+                    <PostOrderButton o={o} />
                     {o.priorities && Object.values(o.priorities).some((l) => l?.length) && (
                       <details className="pri-details">
                         <summary className="linkish">Priority Pokémon</summary>

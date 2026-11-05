@@ -31,3 +31,6 @@ export async function discordRefreshChannel(..._a: unknown[]): Promise<DiscordSt
 export async function discordAnnounceNewOffers(): Promise<{ posted: string[] }> {
   return { posted: [] };
 }
+export async function discordAnnounceOrder(..._a: unknown[]): Promise<{ ok: boolean; message: string }> {
+  return { ok: false, message: "demo" };
+}
