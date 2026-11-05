@@ -22,7 +22,7 @@ export type DemoUser = {
   role?: "user" | "admin";
 };
 export type Sub = UserSubscription & { tier: SubscriptionTier | null };
-export type NewRequest = Pick<CustomRequest, "request_type" | "target" | "details" | "budget" | "deadline" | "discord_username"> & { image?: File | null };
+export type NewRequest = Pick<CustomRequest, "request_type" | "target" | "details" | "budget" | "discord_username"> & { image?: File | null };
 type Result = { error?: string; needsConfirm?: boolean };
 
 type Ctx = {
@@ -47,6 +47,10 @@ type Ctx = {
   requests: CustomRequest[];
   sendRequest: (r: NewRequest) => Promise<CustomRequest>;
   updateRequest: (id: string, patch: Partial<CustomRequest>) => Promise<void>;
+  /** buyer removes their own request (while it's waiting for / showing a quote) */
+  deleteRequest: (id: string) => Promise<Result>;
+  /** re-read just the requests (to pick up a new quote) */
+  refreshRequests: () => Promise<void>;
   reload: () => Promise<void>;
   /** the signed-in customer's priority Pokémon wishlist */
   priorities: Priorities;
@@ -242,8 +246,9 @@ export function SessionProvider({ demoOrders, demoRequests, children }: { demoOr
       target: r.target,
       details: r.details,
       budget: r.budget,
-      deadline: r.deadline,
+      deadline: null,
       discord_username: r.discord_username,
+      eta: null,
       image_url: null,
       status: "new",
       quote_amount: null,
@@ -271,7 +276,6 @@ export function SessionProvider({ demoOrders, demoRequests, children }: { demoOr
       p_target: r.target,
       p_details: r.details,
       p_budget: r.budget,
-      p_deadline: r.deadline,
       p_discord: r.discord_username,
       p_image_url: image_url,
     });
@@ -291,6 +295,25 @@ export function SessionProvider({ demoOrders, demoRequests, children }: { demoOr
       const { error } = await sb().from("custom_requests").update(patch).eq("id", id);
       if (error) alert(`Couldn't update the request: ${error.message}`);
     }
+  }, []);
+
+  const deleteRequest = useCallback(async (id: string): Promise<Result> => {
+    if (LIVE) {
+      const { error } = await sb().rpc("delete_custom_request", { p_id: id });
+      if (error) return { error: error.message };
+    }
+    setRequests((prev) => {
+      const next = prev.filter((r) => r.id !== id);
+      if (!LIVE) store(REQ_KEY, next);
+      return next;
+    });
+    return {};
+  }, []);
+
+  const refreshRequests = useCallback(async () => {
+    if (!LIVE) return;
+    const { data, error } = await sb().from("custom_requests").select("*").order("created_at", { ascending: false }).limit(200);
+    if (!error) setRequests(normalizeRows(data, [], ["budget", "quote_amount"]) as CustomRequest[]);
   }, []);
 
   const savePriorities = useCallback(async (p: Priorities): Promise<Result> => {
@@ -332,11 +355,13 @@ export function SessionProvider({ demoOrders, demoRequests, children }: { demoOr
       requests,
       sendRequest,
       updateRequest,
+      deleteRequest,
+      refreshRequests,
       reload: LIVE ? loadLive : async () => {},
       priorities,
       savePriorities,
     }),
-    [user, needsUsername, ready, signIn, signUpEmail, signInEmail, signInDiscord, checkUsername, claimUsername, signOut, subscriptions, orders, addOrder, updateOrder, markReceived, requests, sendRequest, updateRequest, loadLive, priorities, savePriorities],
+    [user, needsUsername, ready, signIn, signUpEmail, signInEmail, signInDiscord, checkUsername, claimUsername, signOut, subscriptions, orders, addOrder, updateOrder, markReceived, requests, sendRequest, updateRequest, deleteRequest, refreshRequests, loadLive, priorities, savePriorities],
   );
   return <SessionCtx.Provider value={value}>{children}</SessionCtx.Provider>;
 }

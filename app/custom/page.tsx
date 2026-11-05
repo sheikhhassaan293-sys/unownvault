@@ -6,7 +6,7 @@ import { Reveal } from "@/components/ui";
 
 export const metadata: Metadata = {
   title: "Custom requests — get a quote",
-  description: "Not on the list? Tell us the target, deadline and budget. You'll get a quote within a day and only pay once you accept it.",
+  description: "Not on the list? Tell us what you need. You'll get a quote right on the site and only pay once you accept it.",
   alternates: { canonical: "/custom" },
 };
 

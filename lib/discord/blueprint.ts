@@ -239,7 +239,7 @@ export function blueprint(c: Content, site: string): CategorySpec[] {
               color: LIME,
               url: `${site}/custom`,
               description: [
-                "Not on the list? Tell us the target, deadline and budget — you only pay once you accept the quote.",
+                "Not on the list? Tell us what you need on the website — your quote shows up there and you only pay once you accept it.",
                 "",
                 ...quoteSteps.map((st, i) => `**${String(i + 1).padStart(2, "0")} · ${st.title}** — ${st.text}`),
                 "",

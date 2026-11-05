@@ -441,6 +441,13 @@
   .cd-opt.on { background: var(--acc); border-color: var(--acc); color: var(--on-acc); }
   .cd-banner { margin: -12px 0 24px; }
   .svc .each { font-size: 12px; font-weight: 400; color: var(--dim); }
+  /* custom request popup */
+  .rq-state { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 16px; display: grid; gap: 10px; justify-items: start; }
+  .rq-state > .btn, .rq-state > .co-sum { justify-self: stretch; }
+  .rq-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--acc); margin-right: 6px; vertical-align: middle; animation: uv-pulse 1.6s ease-in-out infinite; }
+  .rq-actions { display: flex; justify-content: space-between; gap: 12px; margin-top: 18px; }
+  .rq-open { background: none; border: 0; padding: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .rq-open:hover { color: var(--acc); }
   /* reviews (from Eldorado) */
   .rv-stats { display: flex; align-items: center; gap: 16px; }
   .rv-score { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 88px; height: 88px; border-radius: 50%; border: 2px solid var(--acc); flex: none; }

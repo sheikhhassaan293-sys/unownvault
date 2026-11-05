@@ -687,12 +687,13 @@ function RequestsAdmin({ requests, onUpdate }: { requests: CustomRequest[]; onUp
 function RequestCard({ r, onUpdate, toast }: { r: CustomRequest; onUpdate: (id: string, p: Partial<CustomRequest>) => void; toast: (m: string) => void }) {
   const [amount, setAmount] = useState(r.quote_amount?.toString() ?? "");
   const [reply, setReply] = useState(r.admin_reply ?? "");
+  const [eta, setEta] = useState(r.eta ?? "");
   return (
     <section className="panel asec">
       <div className="head-row" style={{ marginBottom: 10 }}>
         <div>
           <span className="mono dim" style={{ fontSize: 12 }}>
-            #{r.id} · {fmtDate(r.created_at)} · Discord: {r.discord_username}
+            #{r.id} · {fmtDate(r.created_at)} · Discord: {r.discord_username || "—"}
           </span>
           <h2 className="h3" style={{ fontSize: 20, marginTop: 6 }}>
             {r.request_type} · {r.target}
@@ -700,14 +701,24 @@ function RequestCard({ r, onUpdate, toast }: { r: CustomRequest; onUpdate: (id: 
         </div>
         <span className={`badge ${r.status === "new" ? "solid" : ""}`}>{r.status.replace("_", " ")}</span>
       </div>
-      <p className="muted">{r.details}</p>
+      {r.details && (
+        <p className="muted" style={{ whiteSpace: "pre-line" }}>
+          {r.details}
+        </p>
+      )}
       <p className="mono dim" style={{ fontSize: 12, margin: "8px 0 16px" }}>
-        Budget: {r.budget != null ? `$${r.budget}` : "—"} · Deadline: {r.deadline ? new Date(r.deadline).toLocaleDateString("en-GB") : "—"}
+        Budget: {r.budget != null ? `$${r.budget}` : "—"}
+        {r.deadline ? ` · Deadline: ${new Date(r.deadline).toLocaleDateString("en-GB")}` : ""}
+        {!r.user_id ? " · ⚠ sent without an account (old guest request): they can't pay on the site" : ""}
       </p>
       <div className="form">
         <div className="f">
           <label htmlFor={`q-${r.id}`}>Your quote (USD)</label>
           <input id={`q-${r.id}`} type="number" step="any" value={amount} onChange={(e) => setAmount(e.target.value)} />
+        </div>
+        <div className="f">
+          <label htmlFor={`eta-${r.id}`}>How long it&apos;ll take</label>
+          <input id={`eta-${r.id}`} value={eta} onChange={(e) => setEta(e.target.value)} placeholder="e.g. 2 hours, 3 days" maxLength={40} />
         </div>
         <div className="f">
           <label htmlFor={`st-${r.id}`}>Status</label>
@@ -728,8 +739,8 @@ function RequestCard({ r, onUpdate, toast }: { r: CustomRequest; onUpdate: (id: 
             className="btn sm"
             disabled={!amount}
             onClick={() => {
-              onUpdate(r.id, { quote_amount: Number(amount), admin_reply: reply || null, status: "quoted" });
-              toast(`Quote sent — ${r.discord_username} now sees a Pay button`);
+              onUpdate(r.id, { quote_amount: Number(amount), admin_reply: reply || null, eta: eta.trim() || null, status: "quoted" });
+              toast(`Quote sent — ${r.discord_username || "the buyer"} now sees a Pay button`);
             }}
           >
             Send quote

@@ -35,9 +35,9 @@ export const DEFAULT_COPY: Record<string, string> = {
   services_title: "One-off hunts,\n*forged to order.*",
   services_banner: "Not on the list? Ask for it.",
   custom_title: "Not on the list?\n*We'll hunt it down.*",
-  custom_lead: "Tell us the target, the deadline and your budget. You'll get a quote within a day — and you only pay once you accept it.",
+  custom_lead: "Just tell us what you need. Your quote shows up right here, and you only pay once you accept it.",
   custom_steps:
-    "Send | Fill in the form with what you're after.\nGet a quote | We reply on Discord within 24 hours with a price and timeline.\nPay & we start | Accept and a pay button appears in your account. Work starts right after.",
+    "Send | Log in and tell us what you need — that's the only thing required.\nGet a quote | Your price and how long it'll take show up right here on the site.\nPay & we start | Hit Pay on your quote. Work starts right after.",
   custom_form_title: "Your target,\nyour terms.",
   custom_points: "Quotes in USD, no surprises later\nPay only after you accept the quote\nProgress updates on Discord\nAnything that's in the game right now",
   updates_title: "Limited drops.\n*Clock's running.*",

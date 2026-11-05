@@ -158,8 +158,11 @@ export type CustomRequest = {
   target: string;
   details: string;
   budget: number | null;
+  /** no longer asked for (old requests may have one) */
   deadline: string | null;
-  discord_username: string;
+  discord_username: string | null;
+  /** how long it'll take — set by the owner with the quote */
+  eta?: string | null;
   image_url: string | null;
   status: CustomRequestStatus;
   quote_amount: number | null;
