@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { Period, SubscriptionTier } from "@/lib/types";
 import { CurrencySwitch, Price } from "../providers/Currency";
 import { BuyButton } from "../providers/Checkout";
-import { useContent, visible } from "../providers/Settings";
+import { useContent, useOrdersOpen, visible } from "../providers/Settings";
 import { ShardList } from "../ShardBullet";
 import { Reveal } from "../ui";
 
@@ -27,6 +27,7 @@ const flag = (text: string) =>
 
 export function TierSwitcher() {
   const { content } = useContent();
+  const ordersOpen = useOrdersOpen();
   const tiers: SubscriptionTier[] = visible(content.tiers);
   const [period, setPeriod] = useState<Period>("weekly");
   const settings = content.settings;
@@ -54,7 +55,7 @@ export function TierSwitcher() {
             ))}
           </div>
           <AnimatePresence mode="wait">
-            {period === "monthly" && saving > 0 && (
+            {ordersOpen && period === "monthly" && saving > 0 && (
               <motion.span key="save" className="save" initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
                 ≈ {saving}% LESS THAN WEEKLY
               </motion.span>
@@ -81,12 +82,18 @@ export function TierSwitcher() {
               <div className="tname">Tier 0{i + 1}</div>
               <h3 className="h3">{t.name}</h3>
               <p className="tag">{t.tagline}</p>
-              <div className="price">
-                <b>
-                  <Price amount={t.price} from={t.currency} />
-                </b>
-                <span>{per}</span>
-              </div>
+              {ordersOpen ? (
+                <div className="price">
+                  <b>
+                    <Price amount={t.price} from={t.currency} />
+                  </b>
+                  <span>{per}</span>
+                </div>
+              ) : (
+                <div className="price">
+                  <span className="mono">Orders paused — back soon</span>
+                </div>
+              )}
               <ShardList element="thunder" items={t.features.map(flag)} />
               <BuyButton
                 className={`btn ${t.recommended ? "" : "ghost"}`}
@@ -138,6 +145,7 @@ export function TierSwitcher() {
               </tr>
             </thead>
             <tbody>
+              {ordersOpen && (
               <tr>
                 <td>Price</td>
                 {list.map((t) => (
@@ -146,6 +154,7 @@ export function TierSwitcher() {
                   </td>
                 ))}
               </tr>
+              )}
               {rows.map((r) => (
                 <tr key={r}>
                   <td>{flag(r)}</td>

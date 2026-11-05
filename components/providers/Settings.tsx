@@ -211,6 +211,11 @@ export function useCopy(key: string) {
   return useContent().content.settings.copy[key] ?? "";
 }
 
+/** The owner's "Taking orders" switch (stored as queue_open). Off = prices hidden, buying paused. */
+export function useOrdersOpen() {
+  return useContent().content.settings.queue_open !== false;
+}
+
 export function useSettings() {
   return useContent().content.settings;
 }

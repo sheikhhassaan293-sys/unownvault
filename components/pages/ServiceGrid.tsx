@@ -3,13 +3,14 @@
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
 import { useState } from "react";
 import type { ServiceCategory } from "@/lib/types";
-import { useContent, visible } from "../providers/Settings";
+import { useContent, useOrdersOpen, visible } from "../providers/Settings";
 import { BuyButton } from "../providers/Checkout";
 import { Price } from "../providers/Currency";
 import { ShardBullet } from "../ShardBullet";
 
 export function ServiceGrid() {
   const { content } = useContent();
+  const ordersOpen = useOrdersOpen();
   const services = visible(content.services);
   const categories = content.categories;
   const [cat, setCat] = useState<ServiceCategory | "all">("all");
@@ -59,14 +60,21 @@ export function ServiceGrid() {
                 <h3 className="h3">{s.name}</h3>
                 <p>{s.description}</p>
                 <div className="meta">
-                  <div className="pp">
-                    <small>
-                      {s.price_is_from ? "From" : "Price"} · {s.delivery_time}
-                    </small>
-                    <b>
-                      <Price amount={s.price} from={s.currency} />
-                    </b>
-                  </div>
+                  {ordersOpen ? (
+                    <div className="pp">
+                      <small>
+                        {s.price_is_from ? "From" : "Price"} · {s.delivery_time}
+                      </small>
+                      <b>
+                        <Price amount={s.price} from={s.currency} />
+                      </b>
+                    </div>
+                  ) : (
+                    <div className="pp">
+                      <small>Delivery</small>
+                      <span className="mono" style={{ fontSize: 13, whiteSpace: "nowrap", display: "block" }}>{s.delivery_time}</span>
+                    </div>
+                  )}
                   <BuyButton
                     className={`btn sm ${feat ? "" : "ghost"}`}
                     item={{

@@ -94,8 +94,15 @@ export function Shell({
 }
 
 function MaintenanceBar() {
-  const { maintenance } = useSettings();
-  if (!maintenance) return null;
+  const { maintenance, queue_open } = useSettings();
+  if (!maintenance && queue_open !== false) return null;
+  if (!maintenance) {
+    return (
+      <div className="maint" role="status">
+        Orders are paused right now — we&apos;ll reopen soon. Join our Discord to hear first.
+      </div>
+    );
+  }
   return (
     <div className="maint" role="status">
       Maintenance in progress — checkout is paused for a bit. Browse away, we&apos;ll be right back.

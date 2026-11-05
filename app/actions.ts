@@ -56,8 +56,9 @@ export async function createCheckout(kind: "subscription" | "service" | "offer" 
   }
   const { db, user } = await currentUser();
   if (!user) return { ok: false, error: "signin" };
-  const { data: settings } = await db.from("site_settings").select("maintenance").eq("id", 1).single();
+  const { data: settings } = await db.from("site_settings").select("maintenance, queue_open").eq("id", 1).single();
   if (settings?.maintenance) return { ok: false, error: "Checkout is paused for maintenance — try again soon." };
+  if (settings?.queue_open === false) return { ok: false, error: "Orders are paused right now — check back soon." };
   try {
     const r = await createWhopCheckout(kind, id, user.id, returnUrl);
     console.info("[checkout] created", { kind, id, session: r.sessionId, hasUrl: !!r.purchaseUrl });

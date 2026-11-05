@@ -7,6 +7,7 @@ import { BuyButton } from "../providers/Checkout";
 import { Price } from "../providers/Currency";
 import { useSession } from "../providers/Session";
 import { Link } from "../providers/Transition";
+import { useOrdersOpen } from "../providers/Settings";
 import { Reveal } from "../ui";
 
 export const REQUEST_TYPES = ["Shundo hunt", "Shiny hunt", "Stardust", "XP / levelling", "Raids", "Event package", "Something else"];
@@ -15,6 +16,7 @@ type Errors = Partial<Record<"target" | "details" | "budget" | "discord", string
 
 export function RequestForm() {
   const { user, sendRequest } = useSession();
+  const ordersOpen = useOrdersOpen();
   const [sendError, setSendError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<CustomRequest | null>(null);
@@ -73,6 +75,16 @@ export function RequestForm() {
       </span>
     ) : null;
   const a11y = (k: keyof Errors) => ({ id: `rq-${k}`, "aria-invalid": !!errors[k], "aria-describedby": errors[k] ? `rq-${k}-err` : undefined });
+
+  if (!ordersOpen && !done) {
+    return (
+      <div className="ok" role="status">
+        <div className="label">Orders paused</div>
+        <h3 className="h3">Back soon.</h3>
+        <p>We&apos;re not taking new requests right now. Join our Discord to hear the moment we reopen.</p>
+      </div>
+    );
+  }
 
   return (
     <AnimatePresence mode="wait" initial={false}>

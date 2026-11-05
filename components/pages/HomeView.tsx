@@ -38,7 +38,7 @@ export function HomeView() {
         <dl className="status rise" style={{ ["--d" as string]: ".3s" }} aria-label="Status">
           <div>
             <dt>QUEUE</dt>
-            <dd className={s.queue_open ? "live" : "closed"}>{s.queue_open ? "OPEN" : "FULL — BACK SOON"}</dd>
+            <dd className={s.queue_open ? "live" : "closed"}>{s.queue_open ? "OPEN" : "PAUSED — BACK SOON"}</dd>
           </div>
           <div>
             <dt>PAY WITH</dt>
@@ -79,8 +79,14 @@ export function HomeView() {
                     <p>{svc.description.split(".")[0]}.</p>
                   </div>
                   <span className="p">
-                    {svc.price_is_from ? "FROM " : ""}
-                    <Price amount={svc.price} from={svc.currency} />
+                    {s.queue_open ? (
+                      <>
+                        {svc.price_is_from ? "FROM " : ""}
+                        <Price amount={svc.price} from={svc.currency} />
+                      </>
+                    ) : (
+                      <span className="dim">PAUSED</span>
+                    )}
                   </span>
                   <span className="ar" aria-hidden="true">
                     →

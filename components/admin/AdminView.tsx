@@ -35,7 +35,7 @@ const SITE_GROUPS: { title: string; fields: Field<SiteSettings>[] }[] = [
   {
     title: "Status block (homepage)",
     fields: [
-      { key: "queue_open", label: "Queue open", type: "bool", help: "Off shows “FULL — BACK SOON”." },
+      { key: "queue_open", label: "Taking orders", type: "bool", help: "Off = all prices hidden, every Order/Pay button becomes “Orders paused”, the custom request form pauses and a banner shows on every page." },
       { key: "status_payments", label: "Pay with", type: "text" },
       { key: "status_plans", label: "Plans", type: "text" },
       { key: "status_updates", label: "Updates", type: "text" },

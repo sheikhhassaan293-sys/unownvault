@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import type { Offer } from "@/lib/types";
 import { BuyButton } from "../providers/Checkout";
 import { Price } from "../providers/Currency";
-import { useContent } from "../providers/Settings";
+import { useContent, useOrdersOpen } from "../providers/Settings";
 import { useNow } from "../ui";
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -52,6 +52,7 @@ function OfferImage({ offer, small, tag }: { offer: Offer; small?: boolean; tag?
 
 export function OfferFeed() {
   const { content, ready } = useContent();
+  const ordersOpen = useOrdersOpen();
   const offers = content.offers.filter((o) => o.published);
   const now = useNow(1000);
 
@@ -93,9 +94,7 @@ export function OfferFeed() {
                 ))}
               </div>
               <div className="pin-foot">
-                <span className="pp">
-                  <Price amount={pin.o.price} from={pin.o.currency} />
-                </span>
+                <span className="pp">{ordersOpen ? <Price amount={pin.o.price} from={pin.o.currency} /> : null}</span>
                 <BuyButton
                   item={{ kind: "offer", id: pin.o.id, name: pin.o.title, description: "Limited offer. Ends when the timer does.", price: pin.o.price, currency: pin.o.currency, whopPlanId: pin.o.whop_plan_id }}
                 >
@@ -133,9 +132,7 @@ export function OfferFeed() {
                   {t.d ? `${t.d}d ${pad(t.h)}h ${pad(t.m)}m` : `${pad(t.h)}h ${pad(t.m)}m ${pad(t.s)}s`}
                 </div>
                 <div className="act">
-                  <span className="pp">
-                    <Price amount={x.o.price} from={x.o.currency} />
-                  </span>
+                  <span className="pp">{ordersOpen ? <Price amount={x.o.price} from={x.o.currency} /> : null}</span>
                   <BuyButton
                     className="btn sm ghost"
                     item={{ kind: "offer", id: x.o.id, name: x.o.title, description: "Limited offer. Ends when the timer does.", price: x.o.price, currency: x.o.currency, whopPlanId: x.o.whop_plan_id }}

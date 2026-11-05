@@ -9,7 +9,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import type { CheckoutItem } from "@/lib/payments/types";
 import { useMoney } from "./Currency";
-import { useSettings } from "./Settings";
+import { useOrdersOpen, useSettings } from "./Settings";
 import { newId, useSession } from "./Session";
 import { useThemedNavigate } from "./Transition";
 import { createCheckout } from "@/app/actions";
@@ -39,6 +39,14 @@ export function CheckoutProvider({ children }: { children: React.ReactNode }) {
 /** Use from server components: `<BuyButton item={...}>Order</BuyButton>` */
 export function BuyButton({ item, className = "btn", children }: { item: CheckoutItem; className?: string; children: React.ReactNode }) {
   const open = useCheckout();
+  const ordersOpen = useOrdersOpen();
+  if (!ordersOpen) {
+    return (
+      <button type="button" className={`${className.replace(/\bghost\b/, "")} ghost`} disabled aria-disabled="true" title="Orders are paused right now">
+        Orders paused
+      </button>
+    );
+  }
   return (
     <button type="button" className={className} onClick={() => open(item)}>
       {children}
