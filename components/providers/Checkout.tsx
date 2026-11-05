@@ -1,8 +1,9 @@
 "use client";
 
 /**
- * Checkout drawer — Phase 1 mock of the Phase 2 flow:
- *   one "Pay" button → Whop embedded checkout (renders inside this dialog)
+ * Checkout dialog:
+ *   quantity (−/+) where allowed, the cooldown question on one-off orders,
+ *   one "Pay" button → Whop's hosted checkout
  *   small secondary link → "Other payment methods" (manual, if enabled)
  */
 import { AnimatePresence, motion } from "framer-motion";
@@ -15,6 +16,8 @@ import { useThemedNavigate } from "./Transition";
 import { createCheckout } from "@/app/actions";
 import { PriorityPicker, PrioritySummary, usePokedex } from "../PriorityPicker";
 import { sb } from "@/lib/supabase/browser";
+import type { Cooldown } from "@/lib/types";
+import { CooldownQuestion, QuantityStepper } from "../Cooldown";
 
 type Step = "summary" | "whop" | "manual" | "manual-done" | "success" | "signin" | "priorities";
 const CheckoutCtx = createContext<(item: CheckoutItem) => void>(() => {});
@@ -66,6 +69,15 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
   const { nameOf } = usePokedex();
   const [starting, setStarting] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
+  const [qty, setQty] = useState(1);
+  const [cooldown, setCooldown] = useState<Cooldown | null>(null);
+  const maxQty = item.allowQuantity ? Math.max(1, item.maxQuantity ?? 20) : 1;
+  const units = Math.min(qty, maxQty);
+  // every one-off order asks about the buyer's cooldown (custom quotes already asked on the request form)
+  const asksCooldown = item.kind === "service" || item.kind === "offer";
+  const needsCooldown = asksCooldown && !cooldown;
+  const amount = Math.round(item.price * units * 100) / 100;
+  const extras = { quantity: units, cooldown: asksCooldown ? cooldown : null };
 
   /**
    * Live: ask the server for a Whop checkout for this item, then send the buyer to Whop's
@@ -76,7 +88,7 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
     if (!user) return setStep("signin");
     setStarting(true);
     setPayError(null);
-    const r = await createCheckout(item.kind, item.id, `${window.location.origin}/checkout/success`);
+    const r = await createCheckout(item.kind, item.id, `${window.location.origin}/checkout/success`, extras);
     if (!r.ok) {
       setStarting(false);
       return r.error === "signin" ? setStep("signin") : setPayError(r.error);
@@ -86,7 +98,7 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
       return setPayError("Couldn't open checkout — please try again or message us on Discord.");
     }
     try {
-      sessionStorage.setItem("uv-checkout", JSON.stringify({ name: item.name, kind: item.kind, startedAt: Date.now() }));
+      sessionStorage.setItem("uv-checkout", JSON.stringify({ name: units > 1 ? `${item.name} ×${units}` : item.name, kind: item.kind, startedAt: Date.now() }));
     } catch {}
     window.location.href = r.purchaseUrl;
   }
@@ -102,7 +114,14 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
       const up = await db.storage.from("request-images").upload(path, proof, { contentType: proof.type });
       if (!up.error) proofPath = path;
     }
-    const { data, error } = await db.rpc("submit_manual_payment", { p_kind: item.kind, p_item_id: item.id, p_txn: txn.trim(), p_proof_path: proofPath });
+    const { data, error } = await db.rpc("submit_manual_payment", {
+      p_kind: item.kind,
+      p_item_id: item.id,
+      p_txn: txn.trim(),
+      p_proof_path: proofPath,
+      p_quantity: units,
+      p_cooldown: extras.cooldown,
+    });
     setStarting(false);
     if (error) return setPayError(error.message);
     setOrderId(String(data));
@@ -120,8 +139,8 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
       user_id: user?.username ?? "guest",
       type: item.kind,
       item_id: item.id,
-      item_name: item.name,
-      amount: item.price,
+      item_name: units > 1 ? `${item.name} ×${units}` : item.name,
+      amount,
       currency: item.currency,
       status,
       provider,
@@ -131,6 +150,8 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
       proof_url: null,
       created_at: new Date().toISOString(),
       priorities,
+      quantity: units,
+      cooldown: extras.cooldown,
     });
     if (item.kind === "custom") updateRequest(item.id, { status: status === "awaiting_confirmation" ? "accepted" : "in_progress" });
     setOrderId(id);
@@ -150,8 +171,8 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
   }, [onClose]);
 
   const showManual = settings.manual_payments_enabled;
-  const total = money(item.price, item.currency);
-  const charged = exact(item.price, item.currency);
+  const total = money(amount, item.currency);
+  const charged = exact(amount, item.currency);
 
   return (
     <motion.div
@@ -187,6 +208,7 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
         <div className="co-sum">
           <span className="mono dim" style={{ fontSize: 12, letterSpacing: ".12em" }}>
             {item.priceIsFrom ? "FROM" : "TOTAL"}
+            {units > 1 ? ` · ${units} × ${money(item.price, item.currency)}` : ""}
             {item.period ? ` / ${item.period === "weekly" ? "WEEK" : "MONTH"}` : ""}
           </span>
           <b>{total}</b>
@@ -227,6 +249,15 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
                 <PrioritySummary value={Object.fromEntries(item.priorityKinds.map((k) => [k, priorities[k] ?? []]))} nameOf={nameOf} />
               </div>
             ) : null}
+            {item.allowQuantity && (
+              <div className="qty-row">
+                <span className="mono dim" style={{ fontSize: 11, letterSpacing: ".14em" }}>
+                  HOW MANY?
+                </span>
+                <QuantityStepper value={units} max={maxQty} onChange={setQty} />
+              </div>
+            )}
+            {asksCooldown && <CooldownQuestion value={cooldown} onChange={setCooldown} />}
             <div className="paychips">
               <span>CARD</span>
               <span>APPLE PAY</span>
@@ -234,8 +265,14 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
               <span>PAYPAL</span>
               <span>CRYPTO</span>
             </div>
-            <button className="btn btn-block" disabled={settings.maintenance || starting} onClick={startWhop}>
-              {settings.maintenance ? "Checkout paused (maintenance)" : starting ? "Opening secure checkout…" : `Pay ${charged}`}
+            <button className="btn btn-block" disabled={settings.maintenance || starting || needsCooldown} onClick={startWhop}>
+              {settings.maintenance
+                ? "Checkout paused (maintenance)"
+                : starting
+                  ? "Opening secure checkout…"
+                  : needsCooldown
+                    ? "Answer the cooldown question first"
+                    : `Pay ${charged}`}
             </button>
             {live && (
               <p className="mono dim" style={{ fontSize: 12, textAlign: "center", marginTop: 10 }}>
@@ -249,7 +286,7 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
             )}
             {showManual && (
               <div className="alt-pay">
-                <button className="linkish" onClick={() => setStep("manual")}>
+                <button className="linkish" disabled={needsCooldown} onClick={() => setStep("manual")}>
                   Other payment methods
                 </button>
               </div>

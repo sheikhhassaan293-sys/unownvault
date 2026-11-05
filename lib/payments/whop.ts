@@ -1,13 +1,14 @@
 import "server-only";
 import { WhopClient } from "@whop/sdk";
 import { sbService } from "@/lib/supabase/server";
+import type { Cooldown } from "@/lib/types";
 
 /**
  * Whop — primary payment provider.
  *
  * Checkout: the server builds a Whop "checkout configuration" for the exact item and price
  * (looked up in our database, never trusted from the browser), with our user id + item in
- * its metadata. The page embeds it with <WhopCheckoutEmbed sessionId=…>.
+ * its metadata. The buyer is sent to Whop's hosted page (purchase_url).
  * If the admin filled in a Whop plan ID for an item, that plan is used; otherwise Whop
  * creates a matching plan on the fly from the price, so nothing has to be set up in Whop.
  *
@@ -20,33 +21,54 @@ export function whop() {
 }
 
 export type CheckoutKind = "subscription" | "service" | "offer" | "custom";
-export type CheckoutMeta = { site_user_id: string; kind: CheckoutKind; item_id: string; item_name: string };
+export type CheckoutMeta = {
+  site_user_id: string;
+  kind: CheckoutKind;
+  item_id: string;
+  item_name: string;
+  /** strings — Whop metadata values are kept simple */
+  quantity?: string;
+  /** "none" | minutes left, e.g. "60" */
+  cooldown?: string;
+};
+export type CheckoutExtras = { quantity?: number; cooldown?: Cooldown | null };
 
-type Priced = { name: string; price: number; plan: string | null; period: "weekly" | "monthly" | null };
+type Priced = { name: string; price: number; plan: string | null; period: "weekly" | "monthly" | null; quantity: number };
 
 /** The real price of an item, from the database. */
-export async function priceOf(kind: CheckoutKind, id: string, userId: string): Promise<Priced> {
+export async function priceOf(kind: CheckoutKind, id: string, userId: string, qty = 1): Promise<Priced> {
   const db = sbService();
   if (kind === "subscription") {
     const { data } = await db.from("subscription_tiers").select("name, price, period, whop_plan_id, active").eq("id", id).single();
     if (!data?.active) throw new Error("This plan isn't available");
-    return { name: `${data.name} — ${data.period}`, price: Number(data.price), plan: data.whop_plan_id, period: data.period };
+    return { name: `${data.name} — ${data.period}`, price: Number(data.price), plan: data.whop_plan_id, period: data.period, quantity: 1 };
   }
   if (kind === "service") {
-    const { data } = await db.from("services").select("name, price, whop_plan_id, active").eq("id", id).single();
+    const { data } = await db.from("services").select("name, price, whop_plan_id, active, allow_quantity, max_quantity, quote_only").eq("id", id).single();
     if (!data?.active) throw new Error("This service isn't available");
-    return { name: data.name, price: Number(data.price), plan: data.whop_plan_id, period: null };
+    if (data.quote_only) throw new Error("This service is quoted — send a custom request instead");
+    // quantity is only honoured where the owner allows it, and never above the item's max
+    const n = data.allow_quantity ? Math.min(Math.max(1, Math.floor(Number(qty) || 1)), data.max_quantity ?? 20) : 1;
+    const unit = Number(data.price);
+    return {
+      name: n > 1 ? `${data.name} ×${n}` : data.name,
+      price: Math.round(unit * n * 100) / 100,
+      // a fixed Whop plan only matches a single unit
+      plan: n > 1 ? null : data.whop_plan_id,
+      period: null,
+      quantity: n,
+    };
   }
   if (kind === "offer") {
     const { data } = await db.from("offers").select("title, price, whop_plan_id, published, starts_at, ends_at").eq("id", id).single();
     const now = Date.now();
     if (!data?.published || Date.parse(data.starts_at) > now || Date.parse(data.ends_at) < now) throw new Error("This offer has ended");
-    return { name: data.title, price: Number(data.price), plan: data.whop_plan_id, period: null };
+    return { name: data.title, price: Number(data.price), plan: data.whop_plan_id, period: null, quantity: 1 };
   }
   const { data } = await db.from("custom_requests").select("id, user_id, quote_amount, status, request_type, target").eq("id", id).single();
   if (!data || data.user_id !== userId) throw new Error("Request not found");
   if (data.status !== "quoted" || !data.quote_amount) throw new Error("There's no quote to pay yet");
-  return { name: `Custom request ${data.id}`, price: Number(data.quote_amount), plan: null, period: null };
+  return { name: `Custom request ${data.id}`, price: Number(data.quote_amount), plan: null, period: null, quantity: 1 };
 }
 
 /** Whop allows at most 30 characters in a plan title. */
@@ -88,9 +110,13 @@ async function ensureProductId(): Promise<string> {
   return created.id;
 }
 
-export async function createWhopCheckout(kind: CheckoutKind, id: string, userId: string, returnUrl: string) {
-  const item = await priceOf(kind, id, userId);
-  const metadata: CheckoutMeta = { site_user_id: userId, kind, item_id: id, item_name: item.name };
+export async function createWhopCheckout(kind: CheckoutKind, id: string, userId: string, returnUrl: string, extras: CheckoutExtras = {}) {
+  const item = await priceOf(kind, id, userId, extras.quantity);
+  const metadata: CheckoutMeta = { site_user_id: userId, kind, item_id: id, item_name: item.name, quantity: String(item.quantity) };
+  if (kind !== "subscription" && extras.cooldown) {
+    const m = Math.min(120, Math.max(0, Math.round(Number(extras.cooldown.minutes_left) || 0)));
+    metadata.cooldown = extras.cooldown.has ? String(m) : "none";
+  }
   const product_id = item.plan ? undefined : await ensureProductId();
   const res = await whop().checkoutConfigurations.create({
     account_id: process.env.WHOP_COMPANY_ID,
@@ -148,6 +174,8 @@ export async function recordWhopPayment(paymentId: string) {
       provider: "whop",
       payment_method: p.payment_method_type ?? null,
       external_payment_id: p.id,
+      quantity: Math.min(100, Math.max(1, Number(meta.quantity) || 1)),
+      cooldown: meta.cooldown == null ? null : meta.cooldown === "none" ? { has: false, minutes_left: null } : { has: true, minutes_left: Number(meta.cooldown) || null },
     })
     .select("id, status")
     .single();

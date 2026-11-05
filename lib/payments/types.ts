@@ -23,6 +23,9 @@ export type CheckoutItem = {
   priorityKinds?: ("shiny" | "shundo" | "hundo")[];
   /** how many of each the plan includes (shown as a guide in the picker) */
   priorityIncludes?: Partial<Record<"shiny" | "shundo" | "hundo", number>>;
+  /** buyer picks how many (price is per one) */
+  allowQuantity?: boolean;
+  maxQuantity?: number;
 };
 
 export type CheckoutSession =

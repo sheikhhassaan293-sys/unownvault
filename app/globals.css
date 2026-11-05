@@ -425,6 +425,22 @@
   .pri-summary .mono { font-size: 11px; letter-spacing: 0.12em; margin-right: 6px; }
   .dlg.wide { max-width: 760px; }
   .pri-box { border: 1px solid var(--line); border-radius: 4px; padding: 12px 14px; margin-bottom: 18px; }
+  /* quantity stepper + cooldown question (checkout & request form) */
+  .qty-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  .qty { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 4px; }
+  .qty-b { width: 44px; height: 44px; background: none; border: 0; color: var(--text); font-size: 20px; cursor: pointer; }
+  .qty-b:disabled { opacity: 0.3; cursor: default; }
+  .qty-b:not(:disabled):hover { color: var(--acc); }
+  .qty-n { min-width: 36px; text-align: center; font-family: var(--fm); font-size: 16px; }
+  .cd-box { border: 1px solid var(--line); border-radius: 4px; padding: 12px 14px; margin: 0 0 18px; min-width: 0; }
+  .cd-legend { font-size: 11px; letter-spacing: 0.14em; padding: 0 6px; margin-left: -6px; }
+  .cd-row { display: flex; gap: 8px; margin-top: 6px; }
+  .cd-note { margin-top: 10px; }
+  .cd-opt { font-family: var(--fm); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; min-width: 64px; min-height: 40px; padding: 0 14px; border: 1px solid rgba(var(--rgb), 0.3); border-radius: 3px; color: var(--muted); background: none; }
+  .cd-opt:hover { color: var(--text); border-color: rgba(var(--rgb), 0.6); }
+  .cd-opt.on { background: var(--acc); border-color: var(--acc); color: var(--on-acc); }
+  .cd-banner { margin: -12px 0 24px; }
+  .svc .each { font-size: 12px; font-weight: 400; color: var(--dim); }
   .toast { position: fixed; left: 50%; bottom: 28px; z-index: 80; background: var(--bg2); border: 1px solid var(--acc); padding: 12px 18px; border-radius: 4px; font-family: var(--fm); font-size: 13px; max-width: calc(100vw - 32px); pointer-events: none; }
 
   /* ── auth / account (neutral) ────────────────── */

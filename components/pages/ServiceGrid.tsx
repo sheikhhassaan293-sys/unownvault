@@ -7,6 +7,15 @@ import { useContent, useOrdersOpen, visible } from "../providers/Settings";
 import { BuyButton } from "../providers/Checkout";
 import { Price } from "../providers/Currency";
 import { ShardBullet } from "../ShardBullet";
+import { Link } from "../providers/Transition";
+
+/** Which request type a quote-only service pre-selects on the custom request form. */
+function requestTypeFor(category: string) {
+  if (category === "xp") return "XP / levelling";
+  if (category === "rocket") return "Grunt boosting";
+  if (category === "events") return "Event package";
+  return "Something else";
+}
 
 /** Which priority tabs a service's checkout shows (shiny / shundo / hundo hunts). */
 function priorityKindsFor(category: string, name: string): ("shiny" | "shundo" | "hundo")[] | undefined {
@@ -40,6 +49,10 @@ export function ServiceGrid() {
         ))}
       </div>
 
+      <p className="help cd-banner">
+        ⏱ Delivery times are subject to your cooldown timer — we&apos;ll ask about it when you order.
+      </p>
+
       <motion.div layout className="sgrid">
         <AnimatePresence mode="popLayout" initial={false}>
           {shown.map((s, i) => {
@@ -69,13 +82,19 @@ export function ServiceGrid() {
                 <h3 className="h3">{s.name}</h3>
                 <p>{s.description}</p>
                 <div className="meta">
-                  {ordersOpen ? (
+                  {s.quote_only ? (
+                    <div className="pp">
+                      <small>Price</small>
+                      <b style={{ fontSize: 18 }}>Quoted</b>
+                    </div>
+                  ) : ordersOpen ? (
                     <div className="pp">
                       <small>
                         {s.price_is_from ? "From" : "Price"} · {s.delivery_time}
                       </small>
                       <b>
                         <Price amount={s.price} from={s.currency} />
+                        {s.allow_quantity && <small className="each"> each</small>}
                       </b>
                     </div>
                   ) : (
@@ -84,6 +103,17 @@ export function ServiceGrid() {
                       <span className="mono" style={{ fontSize: 13, whiteSpace: "nowrap", display: "block" }}>{s.delivery_time}</span>
                     </div>
                   )}
+                  {s.quote_only ? (
+                    ordersOpen ? (
+                      <Link className={`btn sm ${feat ? "" : "ghost"}`} href={`/custom?type=${encodeURIComponent(requestTypeFor(s.category))}&item=${encodeURIComponent(s.name)}`}>
+                        Get a quote
+                      </Link>
+                    ) : (
+                      <button type="button" className="btn sm ghost" disabled>
+                        Orders paused
+                      </button>
+                    )
+                  ) : (
                   <BuyButton
                     className={`btn sm ${feat ? "" : "ghost"}`}
                     item={{
@@ -96,10 +126,13 @@ export function ServiceGrid() {
                       priceIsFrom: s.price_is_from,
                       whopPlanId: s.whop_plan_id,
                       priorityKinds: priorityKindsFor(s.category, s.name),
+                      allowQuantity: !!s.allow_quantity,
+                      maxQuantity: s.max_quantity ?? 20,
                     }}
                   >
                     Order
                   </BuyButton>
+                  )}
                 </div>
               </motion.article>
             );

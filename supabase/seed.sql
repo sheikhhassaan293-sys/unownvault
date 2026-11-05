@@ -27,7 +27,8 @@ insert into public.service_categories (slug, label, sort_order) values
   ('xp', 'XP / levelling', 4),
   ('raids', 'Raid packages', 5),
   ('events', 'Event packages', 6),
-  ('items', 'Items', 7)
+  ('rocket', 'Team GO Rocket', 7),
+  ('items', 'Items', 8)
 on conflict (slug) do nothing;
 
 insert into public.subscription_tiers (id, name, tagline, period, price, currency, features, compare, recommended, sort_order, active, whop_plan_id) values
@@ -39,30 +40,34 @@ insert into public.subscription_tiers (id, name, tagline, period, price, currenc
   ('tier_m_apex', 'Apex', 'Everything, first, every month.', 'monthly', 69.99, 'USD', '["220 raids of your choice","35 shinies, prioritising ones not in your Pokédex","25 shundos","25 hundos","8M stardust","Top of the queue"]'::jsonb, '{"Raids":"220","Shiny hunts":"35 (new to your Pokédex first)","Shundos":"25","Hundo hunts":"25","Stardust":"8M","Queue":"Top","Discord progress updates":"Yes"}'::jsonb, false, 3, true, null)
 on conflict (id) do nothing;
 
-insert into public.services (currency, image_url, active, whop_plan_id, featured, popular, id, name, category, description, price, price_is_from, delivery_time, sort_order) values
-  ('USD', null, true, null, true, true, 'svc_shundo', 'Shundo Hunt', 'shundo', 'A shiny with perfect stats for the target you choose. Priced by rarity, quoted before we start.', 25, true, '3–7 days', 1),
-  ('USD', null, true, null, false, false, 'svc_shundo_event', 'Event Shundo Run', 'shundo', 'We work a featured event for the one that matters: shiny, perfect, yours.', 35, true, 'event day', 2),
-  ('USD', null, true, null, false, true, 'svc_shiny', 'Shiny Hunt', 'shiny', 'Pick a target, we track it down in shiny.', 10, true, '1–5 days', 3),
-  ('USD', null, true, null, false, false, 'svc_shiny5', 'Shiny Bundle ×5', 'shiny', 'Five shiny targets of your choice from what''s spawning now.', 39, false, '5–10 days', 4),
-  ('USD', null, true, null, false, true, 'svc_dust1', 'Stardust 1M', 'stardust', 'One million stardust, earned the long way so you don''t have to.', 15, false, '3 days', 5),
-  ('USD', null, true, null, false, false, 'svc_dust5', 'Stardust 5M', 'stardust', 'Five million for maxing out your favourites.', 59, false, '10 days', 6),
-  ('USD', null, true, null, false, false, 'svc_level', 'Level Push', 'xp', 'XP to your next level, or a range of levels. Quoted by gap.', 20, true, '2–7 days', 7),
-  ('USD', null, true, null, false, false, 'svc_level_tasks', 'Level-up Tasks', 'xp', 'We clear the task list your next level asks for — catches, raids, the lot.', 30, true, '3–10 days', 8),
-  ('USD', null, true, null, false, false, 'svc_raid20', 'Raid Pack ×20', 'raids', 'Twenty raids of your choice from what''s live.', 12, false, '2 days', 9),
-  ('USD', null, true, null, false, false, 'svc_legend10', 'Legendary Pack ×10', 'raids', 'Ten top-tier raids while the boss is in rotation.', 18, false, '2 days', 10),
-  ('USD', null, true, null, false, false, 'svc_eventday', 'Event Day Package', 'events', 'Full coverage of a featured event day: shiny hunts, bonus catches and event research.', 22, false, 'event day', 11),
-  ('USD', null, true, null, false, false, 'svc_eventweek', 'Event Week Package', 'events', 'Every day of a week-long event worked for its bonuses. One price, all of it.', 49, false, 'event week', 12),
-  ('USD', null, true, null, false, false, 'svc_rarecandy25', 'Rare Candy ×25', 'items', 'Twenty-five Rare Candies, farmed and banked on your account.', 8, false, '1–2 days', 13),
-  ('USD', null, true, null, false, false, 'svc_rarecandy100', 'Rare Candy ×100', 'items', 'A hundred Rare Candies for powering up whatever you''re short on.', 25, false, '3–5 days', 14),
-  ('USD', null, true, null, false, false, 'svc_rarecandyxl', 'Rare Candy XL ×20', 'items', 'Twenty Rare Candy XL to push your favourites past level 40.', 18, false, '2–4 days', 15)
+insert into public.services (currency, image_url, active, whop_plan_id, featured, popular, allow_quantity, max_quantity, quote_only, id, name, category, description, price, price_is_from, delivery_time, sort_order) values
+  ('USD', null, true, null, true, true, true, 20, false, 'svc_shundo', 'Shundo Hunt', 'shundo', 'A shiny with perfect stats for the target you choose. Time is subject to your cooldown timer.', 3, false, '1–2 hours', 1),
+  ('USD', null, true, null, false, false, true, 20, false, 'svc_shundo_event', 'Event Shundo Run', 'shundo', 'We work a featured event for the one that matters: shiny, perfect, yours.', 3.5, false, 'event day', 2),
+  ('USD', null, true, null, false, true, true, 20, false, 'svc_shiny', 'Shiny ×3', 'shiny', 'Three shiny targets of your choice from what''s out in the game.', 3, false, '1–5 days', 3),
+  ('USD', null, true, null, false, false, true, 20, false, 'svc_shiny5', 'Shiny ×5', 'shiny', 'Five shiny targets of your choice from what''s out in the game.', 4.5, false, '5–10 days', 4),
+  ('USD', null, true, null, false, false, true, 20, false, 'svc_shiny10', 'Shiny ×10', 'shiny', 'Ten shiny targets of your choice from what''s out in the game.', 9, false, '5–10 days', 5),
+  ('USD', null, true, null, false, true, false, 20, false, 'svc_dust1', 'Stardust 1M', 'stardust', 'One million stardust, earned the long way so you don''t have to.', 1.75, false, '3 days', 6),
+  ('USD', null, true, null, false, false, false, 20, false, 'svc_dust5', 'Stardust 5M', 'stardust', 'Five million for maxing out your favourites.', 8.5, false, '10 days', 7),
+  ('USD', null, true, null, false, false, false, 20, true, 'svc_level', 'Level Push', 'xp', 'XP to the level you want. Tell us your current level, the level you want and how much XP — we''ll send you a quote.', 20, true, '2–7 days', 8),
+  ('USD', null, true, null, false, false, false, 20, true, 'svc_level_tasks', 'Level-up Tasks', 'xp', 'We clear the task list your next level asks for. Tell us your current and target level — we''ll send you a quote.', 30, true, '3–10 days', 9),
+  ('USD', null, true, null, false, false, true, 20, false, 'svc_raid10', 'Raid Pack ×10', 'raids', 'Ten raids — any star level, whatever''s live.', 1, false, '2 days', 10),
+  ('USD', null, true, null, false, false, true, 20, false, 'svc_raid20', 'Raid Pack ×20', 'raids', 'Twenty raids — any star level, whatever''s live.', 3, false, '2 days', 11),
+  ('USD', null, true, null, false, false, false, 20, false, 'svc_legend10', 'Legendary Pack ×10', 'raids', 'Ten top-tier raids while the boss is in rotation.', 18, false, '2 days', 12),
+  ('USD', null, false, null, false, false, false, 20, false, 'svc_eventday', 'Event Day Package', 'events', 'Full coverage of a featured event day: shiny hunts, bonus catches and event research.', 22, false, 'event day', 13),
+  ('USD', null, false, null, false, false, false, 20, false, 'svc_eventweek', 'Event Week Package', 'events', 'Every day of a week-long event worked for its bonuses. One price, all of it.', 49, false, 'event week', 14),
+  ('USD', null, true, null, false, false, false, 20, true, 'svc_grunt', 'Grunt Boosting', 'rocket', 'We battle Team GO Rocket grunts for you — for Shadow Pokémon, research tasks or medals. Tell us what you need and we''ll quote it.', 0, false, 'quoted', 15),
+  ('USD', null, true, null, false, false, false, 20, false, 'svc_rarecandy10', 'Rare Candy ×10', 'items', 'Ten Rare Candies added to your account.', 1, false, '1–2 days', 20),
+  ('USD', null, true, null, false, false, false, 20, false, 'svc_rarecandy25', 'Rare Candy ×25', 'items', 'Twenty-five Rare Candies added to your account.', 2.3, false, '1–2 days', 21),
+  ('USD', null, true, null, false, false, false, 20, false, 'svc_rarecandy50', 'Rare Candy ×50', 'items', 'Fifty Rare Candies added to your account.', 4.5, false, '2–4 days', 22),
+  ('USD', null, true, null, false, false, false, 20, false, 'svc_rarecandy100', 'Rare Candy ×100', 'items', 'A hundred Rare Candies added to your account.', 9, false, '3–5 days', 23)
 on conflict (id) do nothing;
 
 insert into public.offers (id, title, body, image_url, price, currency, starts_at, ends_at, pinned, published, whop_plan_id) values
-  ('off_weekend', 'Event weekend shiny bundle', 'Three shiny hunts on this weekend''s featured targets, plus a raid pack. Ends when the event does.', null, 24, 'USD', '2026-11-04T16:33:04.729Z', '2026-11-07T18:46:52.729Z', true, true, null),
-  ('off_raidhour', 'Raid hour package', 'Ten raids during this week''s raid hour. Limited slots.', null, 9, 'USD', '2026-11-05T06:33:04.729Z', '2026-11-06T07:13:16.729Z', false, true, null),
-  ('off_dust', 'Double dust week: 3M', 'Three million stardust while the bonus is live — 25% cheaper than usual.', null, 45, 'USD', '2026-11-03T10:33:04.729Z', '2026-11-10T15:33:04.729Z', false, true, null),
-  ('off_spotlight', 'Spotlight hour hunts', 'Shiny hunts during spotlight hour, two targets.', null, 8, 'USD', '2026-10-29T10:33:04.729Z', '2026-11-05T10:33:04.729Z', false, true, null),
-  ('off_scheduled', 'Season opener pack', 'Goes live with the new season.', null, 30, 'USD', '2026-11-09T12:33:04.729Z', '2026-11-16T08:33:04.729Z', false, true, null)
+  ('off_weekend', 'Event weekend shiny bundle', 'Three shiny hunts on this weekend''s featured targets, plus a raid pack. Ends when the event does.', null, 24, 'USD', '2026-11-04T19:12:12.087Z', '2026-11-07T21:26:00.087Z', true, true, null),
+  ('off_raidhour', 'Raid hour package', 'Ten raids during this week''s raid hour. Limited slots.', null, 9, 'USD', '2026-11-05T09:12:12.087Z', '2026-11-06T09:52:24.087Z', false, true, null),
+  ('off_dust', 'Double dust week: 3M', 'Three million stardust while the bonus is live — 25% cheaper than usual.', null, 45, 'USD', '2026-11-03T13:12:12.087Z', '2026-11-10T18:12:12.087Z', false, true, null),
+  ('off_spotlight', 'Spotlight hour hunts', 'Shiny hunts during spotlight hour, two targets.', null, 8, 'USD', '2026-10-29T13:12:12.087Z', '2026-11-05T13:12:12.087Z', false, true, null),
+  ('off_scheduled', 'Season opener pack', 'Goes live with the new season.', null, 30, 'USD', '2026-11-09T15:12:12.087Z', '2026-11-16T11:12:12.087Z', false, true, null)
 on conflict (id) do nothing;
 
 insert into public.faqs (id, sort_order, question, answer) values

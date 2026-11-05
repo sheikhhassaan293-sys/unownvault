@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { sb } from "@/lib/supabase/browser";
 import { LIVE } from "@/lib/supabase/env";
 import { COPY_FIELDS } from "@/lib/copy";
-import { normalizeRows, type Currency, type CustomRequest, type Faq, type Offer, type Order, type Service, type SiteSettings, type SubscriptionTier } from "@/lib/types";
+import { cooldownText, normalizeRows, type Currency, type CustomRequest, type Faq, type Offer, type Order, type Service, type SiteSettings, type SubscriptionTier } from "@/lib/types";
 import { DISPLAY_CURRENCIES } from "../providers/Currency";
 import { ORDER_STATUS, useSession } from "../providers/Session";
 import { useContent, type SiteContent } from "../providers/Settings";
@@ -93,6 +93,9 @@ const serviceFields = (cats: { slug: string; label: string }[]): Field<Service>[
   { key: "price_is_from", label: "Show as “from” price", type: "bool" },
   { key: "delivery_time", label: "Delivery time", type: "text", help: "e.g. 2–5 days" },
   { key: "description", label: "Description", type: "textarea" },
+  { key: "allow_quantity", label: "Buyers can pick how many (−/+)", type: "bool", help: "The price above is then per one." },
+  { key: "max_quantity", label: "Most they can pick at once", type: "number", help: "1–100" },
+  { key: "quote_only", label: "Quote only (no price — “Get a quote” button)", type: "bool", help: "Sends buyers to the custom request form instead of checkout." },
   { key: "featured", label: "Featured (big card)", type: "bool" },
   { key: "popular", label: "Show in “Most ordered” on Home", type: "bool" },
   { key: "active", label: "Visible on site", type: "bool" },
@@ -339,7 +342,11 @@ export function AdminView() {
             onChange={(v) => set("services", v)}
             fields={serviceFields(content.categories)}
             titleOf={(r) => r.name}
-            metaOf={(r) => `${content.categories.find((c) => c.slug === r.category)?.label ?? r.category} · ${r.price_is_from ? "from " : ""}$${r.price}`}
+            metaOf={(r) =>
+              `${content.categories.find((c) => c.slug === r.category)?.label ?? r.category} · ${
+                r.quote_only ? "quote" : `${r.price_is_from ? "from " : ""}$${r.price}${r.allow_quantity ? " each" : ""}`
+              }`
+            }
             addLabel="Add service"
             makeNew={() => ({
               id: uid("svc"),
@@ -356,6 +363,9 @@ export function AdminView() {
               featured: false,
               popular: false,
               whop_plan_id: null,
+              allow_quantity: false,
+              max_quantity: 20,
+              quote_only: false,
             })}
           />
         </>
@@ -577,6 +587,12 @@ function OrdersAdmin({ orders, onStatus }: { orders: Order[]; onStatus: (id: str
                   </td>
                   <td>
                     {o.item_name}
+                    {o.cooldown && (
+                      <>
+                        <br />
+                        <small className={`mono ${o.cooldown.has ? "acc" : "dim"}`}>{cooldownText(o.cooldown)}</small>
+                      </>
+                    )}
                     {o.priorities && Object.values(o.priorities).some((l) => l?.length) && (
                       <details className="pri-details">
                         <summary className="linkish">Priority Pokémon</summary>

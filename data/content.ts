@@ -150,12 +150,13 @@ export const service_categories: { slug: ServiceCategory; label: string }[] = [
   { slug: "xp", label: "XP / levelling" },
   { slug: "raids", label: "Raid packages" },
   { slug: "events", label: "Event packages" },
+  { slug: "rocket", label: "Team GO Rocket" },
   { slug: "items", label: "Items" },
 ];
 
 const svc = (
   s: Omit<Service, "currency" | "image_url" | "active" | "whop_plan_id" | "featured" | "popular"> &
-    Partial<Pick<Service, "featured" | "popular">>,
+    Partial<Pick<Service, "featured" | "popular" | "active">>,
 ): Service => ({
   currency: "USD",
   image_url: null,
@@ -163,25 +164,32 @@ const svc = (
   whop_plan_id: null,
   featured: false,
   popular: false,
+  allow_quantity: false,
+  max_quantity: 20,
+  quote_only: false,
   ...s,
 });
 
 export const services: Service[] = [
-  svc({ id: "svc_shundo", name: "Shundo Hunt", category: "shundo", description: "A shiny with perfect stats for the target you choose. Priced by rarity, quoted before we start.", price: 25, price_is_from: true, delivery_time: "3–7 days", sort_order: 1, featured: true, popular: true }),
-  svc({ id: "svc_shundo_event", name: "Event Shundo Run", category: "shundo", description: "We work a featured event for the one that matters: shiny, perfect, yours.", price: 35, price_is_from: true, delivery_time: "event day", sort_order: 2 }),
-  svc({ id: "svc_shiny", name: "Shiny Hunt", category: "shiny", description: "Pick a target, we track it down in shiny.", price: 10, price_is_from: true, delivery_time: "1–5 days", sort_order: 3, popular: true }),
-  svc({ id: "svc_shiny5", name: "Shiny Bundle ×5", category: "shiny", description: "Five shiny targets of your choice from what's spawning now.", price: 39, price_is_from: false, delivery_time: "5–10 days", sort_order: 4 }),
-  svc({ id: "svc_dust1", name: "Stardust 1M", category: "stardust", description: "One million stardust, earned the long way so you don't have to.", price: 15, price_is_from: false, delivery_time: "3 days", sort_order: 5, popular: true }),
-  svc({ id: "svc_dust5", name: "Stardust 5M", category: "stardust", description: "Five million for maxing out your favourites.", price: 59, price_is_from: false, delivery_time: "10 days", sort_order: 6 }),
-  svc({ id: "svc_level", name: "Level Push", category: "xp", description: "XP to your next level, or a range of levels. Quoted by gap.", price: 20, price_is_from: true, delivery_time: "2–7 days", sort_order: 7 }),
-  svc({ id: "svc_level_tasks", name: "Level-up Tasks", category: "xp", description: "We clear the task list your next level asks for — catches, raids, the lot.", price: 30, price_is_from: true, delivery_time: "3–10 days", sort_order: 8 }),
-  svc({ id: "svc_raid20", name: "Raid Pack ×20", category: "raids", description: "Twenty raids of your choice from what's live.", price: 12, price_is_from: false, delivery_time: "2 days", sort_order: 9 }),
-  svc({ id: "svc_legend10", name: "Legendary Pack ×10", category: "raids", description: "Ten top-tier raids while the boss is in rotation.", price: 18, price_is_from: false, delivery_time: "2 days", sort_order: 10 }),
-  svc({ id: "svc_eventday", name: "Event Day Package", category: "events", description: "Full coverage of a featured event day: shiny hunts, bonus catches and event research.", price: 22, price_is_from: false, delivery_time: "event day", sort_order: 11 }),
-  svc({ id: "svc_eventweek", name: "Event Week Package", category: "events", description: "Every day of a week-long event worked for its bonuses. One price, all of it.", price: 49, price_is_from: false, delivery_time: "event week", sort_order: 12 }),
-  svc({ id: "svc_rarecandy25", name: "Rare Candy ×25", category: "items", description: "Twenty-five Rare Candies, farmed and banked on your account.", price: 8, price_is_from: false, delivery_time: "1–2 days", sort_order: 13 }),
-  svc({ id: "svc_rarecandy100", name: "Rare Candy ×100", category: "items", description: "A hundred Rare Candies for powering up whatever you're short on.", price: 25, price_is_from: false, delivery_time: "3–5 days", sort_order: 14 }),
-  svc({ id: "svc_rarecandyxl", name: "Rare Candy XL ×20", category: "items", description: "Twenty Rare Candy XL to push your favourites past level 40.", price: 18, price_is_from: false, delivery_time: "2–4 days", sort_order: 15 }),
+  svc({ id: "svc_shundo", name: "Shundo Hunt", category: "shundo", description: "A shiny with perfect stats for the target you choose. Time is subject to your cooldown timer.", price: 3, price_is_from: false, delivery_time: "1–2 hours", sort_order: 1, featured: true, popular: true, allow_quantity: true, max_quantity: 20 }),
+  svc({ id: "svc_shundo_event", name: "Event Shundo Run", category: "shundo", description: "We work a featured event for the one that matters: shiny, perfect, yours.", price: 3.5, price_is_from: false, delivery_time: "event day", sort_order: 2, allow_quantity: true, max_quantity: 20 }),
+  svc({ id: "svc_shiny", name: "Shiny ×3", category: "shiny", description: "Three shiny targets of your choice from what's out in the game.", price: 3, price_is_from: false, delivery_time: "1–5 days", sort_order: 3, popular: true, allow_quantity: true, max_quantity: 20 }),
+  svc({ id: "svc_shiny5", name: "Shiny ×5", category: "shiny", description: "Five shiny targets of your choice from what's out in the game.", price: 4.5, price_is_from: false, delivery_time: "5–10 days", sort_order: 4, allow_quantity: true, max_quantity: 20 }),
+  svc({ id: "svc_shiny10", name: "Shiny ×10", category: "shiny", description: "Ten shiny targets of your choice from what's out in the game.", price: 9, price_is_from: false, delivery_time: "5–10 days", sort_order: 5, allow_quantity: true, max_quantity: 20 }),
+  svc({ id: "svc_dust1", name: "Stardust 1M", category: "stardust", description: "One million stardust, earned the long way so you don't have to.", price: 1.75, price_is_from: false, delivery_time: "3 days", sort_order: 6, popular: true }),
+  svc({ id: "svc_dust5", name: "Stardust 5M", category: "stardust", description: "Five million for maxing out your favourites.", price: 8.5, price_is_from: false, delivery_time: "10 days", sort_order: 7 }),
+  svc({ id: "svc_level", name: "Level Push", category: "xp", description: "XP to the level you want. Tell us your current level, the level you want and how much XP — we'll send you a quote.", price: 20, price_is_from: true, delivery_time: "2–7 days", sort_order: 8, quote_only: true }),
+  svc({ id: "svc_level_tasks", name: "Level-up Tasks", category: "xp", description: "We clear the task list your next level asks for. Tell us your current and target level — we'll send you a quote.", price: 30, price_is_from: true, delivery_time: "3–10 days", sort_order: 9, quote_only: true }),
+  svc({ id: "svc_raid10", name: "Raid Pack ×10", category: "raids", description: "Ten raids — any star level, whatever's live.", price: 1, price_is_from: false, delivery_time: "2 days", sort_order: 10, allow_quantity: true, max_quantity: 20 }),
+  svc({ id: "svc_raid20", name: "Raid Pack ×20", category: "raids", description: "Twenty raids — any star level, whatever's live.", price: 3, price_is_from: false, delivery_time: "2 days", sort_order: 11, allow_quantity: true, max_quantity: 20 }),
+  svc({ id: "svc_legend10", name: "Legendary Pack ×10", category: "raids", description: "Ten top-tier raids while the boss is in rotation.", price: 18, price_is_from: false, delivery_time: "2 days", sort_order: 12 }),
+  svc({ id: "svc_eventday", name: "Event Day Package", category: "events", description: "Full coverage of a featured event day: shiny hunts, bonus catches and event research.", price: 22, price_is_from: false, delivery_time: "event day", sort_order: 13, active: false }),
+  svc({ id: "svc_eventweek", name: "Event Week Package", category: "events", description: "Every day of a week-long event worked for its bonuses. One price, all of it.", price: 49, price_is_from: false, delivery_time: "event week", sort_order: 14, active: false }),
+  svc({ id: "svc_grunt", name: "Grunt Boosting", category: "rocket", description: "We battle Team GO Rocket grunts for you — for Shadow Pokémon, research tasks or medals. Tell us what you need and we'll quote it.", price: 0, price_is_from: false, delivery_time: "quoted", sort_order: 15, quote_only: true }),
+  svc({ id: "svc_rarecandy10", name: "Rare Candy ×10", category: "items", description: "Ten Rare Candies added to your account.", price: 1, price_is_from: false, delivery_time: "1–2 days", sort_order: 20 }),
+  svc({ id: "svc_rarecandy25", name: "Rare Candy ×25", category: "items", description: "Twenty-five Rare Candies added to your account.", price: 2.3, price_is_from: false, delivery_time: "1–2 days", sort_order: 21 }),
+  svc({ id: "svc_rarecandy50", name: "Rare Candy ×50", category: "items", description: "Fifty Rare Candies added to your account.", price: 4.5, price_is_from: false, delivery_time: "2–4 days", sort_order: 22 }),
+  svc({ id: "svc_rarecandy100", name: "Rare Candy ×100", category: "items", description: "A hundred Rare Candies added to your account.", price: 9, price_is_from: false, delivery_time: "3–5 days", sort_order: 23 }),
 ];
 
 // ───────────────────────────────────────────── offers
@@ -278,9 +286,9 @@ export const demo_subscriptions: UserSubscription[] = [
 ];
 
 export const demo_orders: Order[] = [
-  { id: "UV-7K2QD", user_id: "user_demo", type: "service", item_id: "svc_shundo", item_name: "Shundo Hunt", amount: 25, currency: "USD", status: "in_progress", provider: "whop", payment_method: "card", transaction_ref: null, external_payment_id: "pay_demo1", proof_url: null, created_at: at(-30) },
+  { id: "UV-7K2QD", user_id: "user_demo", type: "service", item_id: "svc_shundo", item_name: "Shundo Hunt", amount: 3, currency: "USD", status: "in_progress", provider: "whop", payment_method: "card", transaction_ref: null, external_payment_id: "pay_demo1", proof_url: null, created_at: at(-30) },
   { id: "UV-3MX8A", user_id: "user_demo", type: "subscription", item_id: "tier_m_hunter", item_name: "Hunter — monthly", amount: 59, currency: "USD", status: "completed", provider: "whop", payment_method: "apple_pay", transaction_ref: null, external_payment_id: "pay_demo2", proof_url: null, created_at: at(-24 * 12) },
-  { id: "UV-9PL0C", user_id: "user_demo", type: "service", item_id: "svc_dust1", item_name: "Stardust 1M", amount: 15, currency: "USD", status: "completed", provider: "whop", payment_method: "paypal", transaction_ref: null, external_payment_id: "pay_demo3", proof_url: null, created_at: at(-24 * 20) },
+  { id: "UV-9PL0C", user_id: "user_demo", type: "service", item_id: "svc_dust1", item_name: "Stardust 1M", amount: 1.75, currency: "USD", status: "completed", provider: "whop", payment_method: "paypal", transaction_ref: null, external_payment_id: "pay_demo3", proof_url: null, created_at: at(-24 * 20) },
 ];
 
 export const demo_custom_requests: CustomRequest[] = [

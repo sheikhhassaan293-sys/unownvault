@@ -47,7 +47,12 @@ export async function syncAdminRole(): Promise<"admin" | "user" | null> {
 export type CheckoutResult = { ok: true; sessionId: string; purchaseUrl: string | null } | { ok: false; error: string };
 
 /** Start a Whop checkout for one item. The price always comes from the database. */
-export async function createCheckout(kind: "subscription" | "service" | "offer" | "custom", id: string, returnUrl: string): Promise<CheckoutResult> {
+export async function createCheckout(
+  kind: "subscription" | "service" | "offer" | "custom",
+  id: string,
+  returnUrl: string,
+  extras: { quantity?: number; cooldown?: { has: boolean; minutes_left: number | null } | null } = {},
+): Promise<CheckoutResult> {
   if (!LIVE) return { ok: false, error: "demo" };
   const { whopConfigured, createWhopCheckout } = await import("@/lib/payments/whop");
   if (!whopConfigured()) {
@@ -60,7 +65,7 @@ export async function createCheckout(kind: "subscription" | "service" | "offer" 
   if (settings?.maintenance) return { ok: false, error: "Checkout is paused for maintenance — try again soon." };
   if (settings?.queue_open === false) return { ok: false, error: "Orders are paused right now — check back soon." };
   try {
-    const r = await createWhopCheckout(kind, id, user.id, returnUrl);
+    const r = await createWhopCheckout(kind, id, user.id, returnUrl, extras);
     console.info("[checkout] created", { kind, id, session: r.sessionId, hasUrl: !!r.purchaseUrl });
     return { ok: true, sessionId: r.sessionId, purchaseUrl: r.purchaseUrl };
   } catch (e) {

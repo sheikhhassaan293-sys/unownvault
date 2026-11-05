@@ -2,7 +2,8 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import type { CustomRequest } from "@/lib/types";
+import { cooldownText, type Cooldown, type CustomRequest } from "@/lib/types";
+import { CooldownQuestion } from "../Cooldown";
 import { BuyButton } from "../providers/Checkout";
 import { Price } from "../providers/Currency";
 import { useSession } from "../providers/Session";
@@ -10,9 +11,10 @@ import { Link } from "../providers/Transition";
 import { useOrdersOpen } from "../providers/Settings";
 import { Reveal } from "../ui";
 
-export const REQUEST_TYPES = ["Shundo hunt", "Shiny hunt", "Stardust", "XP / levelling", "Raids", "Event package", "Something else"];
+export const REQUEST_TYPES = ["Shundo hunt", "Shiny hunt", "Stardust", "XP / levelling", "Raids", "Grunt boosting", "Event package", "Something else"];
+const XP_TYPE = "XP / levelling";
 
-type Errors = Partial<Record<"target" | "details" | "budget" | "discord", string>>;
+type Errors = Partial<Record<"target" | "details" | "budget" | "discord" | "cur" | "want" | "xp" | "cooldown", string>>;
 
 export function RequestForm() {
   const { user, sendRequest } = useSession();
@@ -23,6 +25,21 @@ export function RequestForm() {
   const [errors, setErrors] = useState<Errors>({});
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [type, setType] = useState(REQUEST_TYPES[0]);
+  const [target, setTarget] = useState("");
+  const [cooldown, setCooldown] = useState<Cooldown | null>(null);
+  const isXp = type === XP_TYPE;
+
+  // "Get a quote" on the services page links here with ?type=…&item=…
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const t = q.get("type");
+    /* eslint-disable react-hooks/set-state-in-effect -- read the link's query once after hydration */
+    if (t && REQUEST_TYPES.includes(t)) setType(t);
+    const item = q.get("item");
+    if (item) setTarget(item.slice(0, 80));
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, []);
 
   useEffect(() => {
     if (!file) return;
@@ -38,7 +55,15 @@ export function RequestForm() {
     const v = (k: string) => String(fd.get(k) ?? "").trim();
     const errs: Errors = {};
     if (!v("target")) errs.target = "What are we hunting?";
-    if (v("details").length < 10) errs.details = "A few more words, please";
+    if (isXp) {
+      const lvl = (k: string) => /^\d{1,2}$/.test(v(k)) && Number(v(k)) >= 1 && Number(v(k)) <= 80;
+      if (!lvl("cur")) errs.cur = "Your level now, e.g. 38";
+      if (!lvl("want")) errs.want = "The level you want, e.g. 42";
+      else if (lvl("cur") && Number(v("want")) <= Number(v("cur"))) errs.want = "Must be higher than your current level";
+      if (!v("xp")) errs.xp = "How much XP? e.g. 5,000,000";
+    }
+    if (!cooldown) errs.cooldown = "Pick one";
+    if (v("details").length < 10 && !isXp) errs.details = "A few more words, please";
     if (v("budget") && !/^\d+(\.\d{1,2})?$/.test(v("budget"))) errs.budget = "Numbers only, e.g. 40";
     if (!/^[a-z0-9_.]{2,32}$/i.test(v("discord"))) errs.discord = "Your Discord username, e.g. nighthunter7";
     setErrors(errs);
@@ -46,6 +71,12 @@ export function RequestForm() {
       document.getElementById(`rq-${Object.keys(errs)[0]}`)?.focus();
       return;
     }
+    // the extra answers travel inside the request's details, so they show everywhere the request does
+    const extra = [
+      isXp ? `Current level: ${v("cur")} · Wants level: ${v("want")} · XP wanted: ${v("xp")}` : "",
+      cooldownText(cooldown),
+    ].filter(Boolean);
+    const details = [v("details"), ...extra].filter(Boolean).join("\n");
     setBusy(true);
     setSendError(null);
     let req: CustomRequest;
@@ -53,7 +84,7 @@ export function RequestForm() {
       req = await sendRequest({
       request_type: v("type"),
       target: v("target"),
-      details: v("details"),
+      details,
       budget: v("budget") ? Number(v("budget")) : null,
       deadline: v("deadline") || null,
       discord_username: v("discord"),
@@ -115,7 +146,7 @@ export function RequestForm() {
         <motion.form key="form" className="form" onSubmit={onSubmit} noValidate initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
           <div className="f">
             <label htmlFor="rq-type">Request type</label>
-            <select id="rq-type" name="type" defaultValue={REQUEST_TYPES[0]}>
+            <select id="rq-type" name="type" value={type} onChange={(e) => setType(e.target.value)}>
               {REQUEST_TYPES.map((t) => (
                 <option key={t}>{t}</option>
               ))}
@@ -123,11 +154,41 @@ export function RequestForm() {
           </div>
           <div className="f">
             <label htmlFor="rq-target">Target / quantity</label>
-            <input name="target" placeholder="e.g. 3 targets, or 2M dust" {...a11y("target")} />
+            <input
+              name="target"
+              value={target}
+              onChange={(e) => setTarget(e.target.value)}
+              placeholder={isXp ? "e.g. Level 38 → 42" : type === "Grunt boosting" ? "e.g. 20 grunts, Shadow Ralts" : "e.g. 3 targets, or 2M dust"}
+              {...a11y("target")}
+            />
             {err("target")}
           </div>
+          {isXp && (
+            <>
+              <div className="f">
+                <label htmlFor="rq-cur">Current level</label>
+                <input name="cur" inputMode="numeric" placeholder="e.g. 38" {...a11y("cur")} />
+                {err("cur")}
+              </div>
+              <div className="f">
+                <label htmlFor="rq-want">Level you want</label>
+                <input name="want" inputMode="numeric" placeholder="e.g. 42" {...a11y("want")} />
+                {err("want")}
+              </div>
+              <div className="f full">
+                <label htmlFor="rq-xp">How much XP do you want?</label>
+                <input name="xp" placeholder="e.g. 5,000,000" {...a11y("xp")} />
+                {err("xp")}
+                <span className="help">We&apos;ll send you a quote for this — you only pay once you accept it.</span>
+              </div>
+            </>
+          )}
+          <div className="f full" id="rq-cooldown" tabIndex={-1}>
+            <CooldownQuestion value={cooldown} onChange={setCooldown} idPrefix="rq-cd" />
+            {err("cooldown")}
+          </div>
           <div className="f full">
-            <label htmlFor="rq-details">Details</label>
+            <label htmlFor="rq-details">{isXp ? "Anything else? (optional)" : "Details"}</label>
             <textarea name="details" placeholder="What do you need, and anything we should know?" {...a11y("details")} />
             {err("details")}
           </div>

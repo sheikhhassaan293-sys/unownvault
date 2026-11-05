@@ -58,7 +58,28 @@ export type Service = {
   /** Shown in "Most ordered" on Home when true, in sort_order. (extra column) */
   popular: boolean;
   whop_plan_id: string | null;
+  /** buyer can pick how many (−/+) at checkout */
+  allow_quantity?: boolean;
+  max_quantity?: number;
+  /** no fixed price — "Get a quote" sends them to the custom request form */
+  quote_only?: boolean;
 };
+
+/** The buyer's answer to "Do you have a cooldown timer?" (minutes_left: up to 120). */
+export type Cooldown = { has: boolean; minutes_left: number | null };
+export const COOLDOWN_OPTIONS = [
+  { label: "Full 2 hours", minutes: 120 },
+  { label: "About 1½ hours", minutes: 90 },
+  { label: "About 1 hour", minutes: 60 },
+  { label: "About 30 minutes", minutes: 30 },
+  { label: "Less than 15 minutes", minutes: 15 },
+] as const;
+export function cooldownText(c: Cooldown | null | undefined) {
+  if (!c) return "—";
+  if (!c.has) return "No cooldown";
+  const o = COOLDOWN_OPTIONS.find((x) => x.minutes === c.minutes_left);
+  return `Cooldown: ${o ? o.label.toLowerCase() : `${c.minutes_left ?? "?"} min`} left`;
+}
 
 export type Offer = {
   id: string;
@@ -101,6 +122,8 @@ export type Order = {
   created_at: string;
   /** copy of the buyer's priority Pokémon when they ordered */
   priorities?: Priorities | null;
+  quantity?: number;
+  cooldown?: Cooldown | null;
 };
 
 export type UserSubscription = {
