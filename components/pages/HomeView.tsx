@@ -5,8 +5,10 @@ import { Price } from "../providers/Currency";
 import { CopyText, useContent, useCopy, visible } from "../providers/Settings";
 import { Link } from "../providers/Transition";
 import { Arrow, DiscordLink, Reveal } from "../ui";
+import type { ReviewData } from "@/lib/eldorado-reviews-source";
+import { ReviewsStrip } from "./Reviews";
 
-export function HomeView() {
+export function HomeView({ reviews }: { reviews?: ReviewData }) {
   const { content } = useContent();
   const s = content.settings;
   const popular = visible(content.services)
@@ -97,6 +99,8 @@ export function HomeView() {
           </div>
         </section>
       )}
+
+      {reviews && <ReviewsStrip data={reviews} />}
 
       <section className="sec" aria-labelledby="how-h">
         <div className="head">

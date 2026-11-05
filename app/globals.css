@@ -441,6 +441,22 @@
   .cd-opt.on { background: var(--acc); border-color: var(--acc); color: var(--on-acc); }
   .cd-banner { margin: -12px 0 24px; }
   .svc .each { font-size: 12px; font-weight: 400; color: var(--dim); }
+  /* reviews (from Eldorado) */
+  .rv-stats { display: flex; align-items: center; gap: 16px; }
+  .rv-score { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 88px; height: 88px; border-radius: 50%; border: 2px solid var(--acc); flex: none; }
+  .rv-score b { font-size: 21px; line-height: 1; color: var(--acc); letter-spacing: -0.02em; }
+  .rv-score span { font-family: var(--fm); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .rv-meta { display: grid; gap: 4px; font-size: 15px; }
+  .rv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 14px; }
+  .rv-card { padding: 20px; display: flex; flex-direction: column; gap: 12px; height: 100%; }
+  .rv-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .rv-thumb { font-size: 18px; }
+  .rv-cat { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .rv-text { font-size: 16px; line-height: 1.55; flex: 1; overflow-wrap: anywhere; }
+  .rv-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .rv-tags span { font-family: var(--fm); font-size: 11px; letter-spacing: 0.04em; border: 1px solid rgba(var(--rgb), 0.3); color: var(--muted); padding: 4px 8px; border-radius: 3px; }
+  .rv-foot { display: flex; justify-content: space-between; font-size: 12px; }
+  .rv-more { margin-top: 22px; text-align: center; }
   .toast { position: fixed; left: 50%; bottom: 28px; z-index: 80; background: var(--bg2); border: 1px solid var(--acc); padding: 12px 18px; border-radius: 4px; font-family: var(--fm); font-size: 13px; max-width: calc(100vw - 32px); pointer-events: none; }
 
   /* ── auth / account (neutral) ────────────────── */

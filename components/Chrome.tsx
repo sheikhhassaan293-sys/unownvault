@@ -115,6 +115,7 @@ export function Footer() {
       </div>
       <div>
         <h4>Help</h4>
+        <Link href="/reviews">Reviews</Link>
         <Link href="/#faq">FAQ</Link>
         <DiscordLink className="">Discord</DiscordLink>
         <a href={`mailto:${contact_email}`}>{contact_email}</a>

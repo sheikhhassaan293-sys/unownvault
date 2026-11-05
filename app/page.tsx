@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { HomeView } from "@/components/pages/HomeView";
 import { getFaqs } from "@/lib/data";
+import { getEldoradoReviews } from "@/lib/eldorado-reviews";
 
 export const metadata: Metadata = {
   title: { absolute: "UnownVault — Pokémon GO hunts, dust & raid services" },
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-  const faqs = await getFaqs();
+  const [faqs, reviews] = await Promise.all([getFaqs(), getEldoradoReviews()]);
   const faqLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -19,7 +20,7 @@ export default async function Home() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd).replace(/</g, "\\u003c") }} />
-      <HomeView />
+      <HomeView reviews={reviews} />
     </>
   );
 }
