@@ -82,3 +82,141 @@ export async function confirmCheckout(receiptId: string): Promise<{ orderId: str
     return { orderId: null, status: "processing" };
   }
 }
+
+/* ───────────────────────────── Discord server setup (admin only) ───────────────────────────── */
+
+async function requireAdmin() {
+  if (!LIVE) throw new Error("Discord setup works on the live site only.");
+  const { db, user } = await currentUser();
+  if (!user) throw new Error("Please log in.");
+  const { data } = await db.from("profiles").select("role").eq("id", user.id).single();
+  if (data?.role !== "admin") throw new Error("Admins only.");
+}
+
+export type DiscordStatus =
+  | { ok: false; reason: "no-token" | "error"; message?: string }
+  | {
+      ok: true;
+      inviteUrl: string | null;
+      guild: { id: string; name: string } | null;
+      guildCount: number;
+      channels: string[];
+      roles: string[];
+      plan: { name: string; channels: string[] }[];
+      newRoles: string[];
+    };
+
+export async function discordStatus(): Promise<DiscordStatus> {
+  try {
+    await requireAdmin();
+    const { discordConfigured, botClientId, targetGuild, dc } = await import("@/lib/discord/api");
+    if (!discordConfigured()) return { ok: false, reason: "no-token" };
+    const id = botClientId();
+    const inviteUrl = id ? `https://discord.com/oauth2/authorize?client_id=${id}&scope=bot&permissions=8` : null;
+    const { guild, count } = await targetGuild();
+    const { blueprint, ROLES } = await import("@/lib/discord/blueprint");
+    const { getSiteContent } = await import("@/lib/data");
+    const plan = blueprint(await getSiteContent(), process.env.NEXT_PUBLIC_SITE_URL ?? "").map((c) => ({ name: c.name, channels: c.channels.map((x) => `#${x.name}`) }));
+    if (!guild) return { ok: true, inviteUrl, guild: null, guildCount: count, channels: [], roles: [], plan, newRoles: ROLES.map((r) => r.name) };
+    const [channels, roles] = await Promise.all([
+      dc<{ name: string; type: number }[]>("GET", `/guilds/${guild.id}/channels`),
+      dc<{ name: string; managed: boolean }[]>("GET", `/guilds/${guild.id}/roles`),
+    ]);
+    const roleNames = roles.filter((r) => !r.managed && r.name !== "@everyone").map((r) => r.name);
+    return {
+      ok: true,
+      inviteUrl,
+      guild,
+      guildCount: count,
+      channels: channels.map((c) => (c.type === 4 ? `▸ ${c.name.toUpperCase()}` : c.type === 2 ? `🔊 ${c.name}` : `#${c.name}`)),
+      roles: roleNames,
+      plan,
+      newRoles: ROLES.filter((r) => !roleNames.includes(r.name)).map((r) => r.name),
+    };
+  } catch (e) {
+    return { ok: false, reason: "error", message: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export type DiscordStepResult = { ok: boolean; done: string[]; failed: string[]; message?: string };
+
+/**
+ * One step of the build, so no single request runs too long:
+ *   "delete"   → delete every existing channel and category
+ *   "roles"    → create the UnownVault roles that don't exist yet
+ *   "category" → build category #index with its channels and info posts
+ */
+export async function discordStep(step: "delete" | "roles" | "category", index = 0): Promise<DiscordStepResult> {
+  const done: string[] = [];
+  const failed: string[] = [];
+  try {
+    await requireAdmin();
+    const { dc, targetGuild } = await import("@/lib/discord/api");
+    const { ROLES, blueprint, overwrites } = await import("@/lib/discord/blueprint");
+    const { guild } = await targetGuild();
+    if (!guild) return { ok: false, done, failed, message: "The bot isn't in exactly one server yet." };
+    const g = guild.id;
+
+    if (step === "delete") {
+      const channels = await dc<{ id: string; name: string; type: number }[]>("GET", `/guilds/${g}/channels`);
+      // channels first, categories last
+      for (const ch of [...channels].sort((a, b) => Number(a.type === 4) - Number(b.type === 4))) {
+        try {
+          await dc("DELETE", `/channels/${ch.id}`);
+          done.push(ch.name);
+        } catch (e) {
+          failed.push(`${ch.name} (${e instanceof Error ? e.message : "error"})`);
+        }
+      }
+      return { ok: true, done, failed };
+    }
+
+    const roles = await dc<{ id: string; name: string }[]>("GET", `/guilds/${g}/roles`);
+    const byName = new Map(roles.map((r) => [r.name, r.id]));
+
+    if (step === "roles") {
+      for (const r of ROLES) {
+        if (byName.has(r.name)) continue;
+        try {
+          await dc("POST", `/guilds/${g}/roles`, { name: r.name, color: r.color, hoist: r.hoist, permissions: r.permissions, mentionable: false });
+          done.push(r.name);
+        } catch (e) {
+          failed.push(`${r.name} (${e instanceof Error ? e.message : "error"})`);
+        }
+      }
+      return { ok: true, done, failed };
+    }
+
+    // step === "category"
+    const ids: Record<string, string> = {};
+    for (const r of ROLES) if (byName.has(r.name)) ids[r.key] = byName.get(r.name)!;
+    const { getSiteContent } = await import("@/lib/data");
+    const cats = blueprint(await getSiteContent(), process.env.NEXT_PUBLIC_SITE_URL ?? "");
+    const cat = cats[index];
+    if (!cat) return { ok: true, done, failed };
+    const parent = await dc<{ id: string }>("POST", `/guilds/${g}/channels`, { name: cat.name, type: 4, position: index, permission_overwrites: overwrites(cat.access, g, ids) });
+    done.push(`▸ ${cat.name}`);
+    for (const [i, ch] of cat.channels.entries()) {
+      try {
+        const made = await dc<{ id: string }>("POST", `/guilds/${g}/channels`, {
+          name: ch.name,
+          type: 0,
+          topic: ch.topic.slice(0, 1024),
+          parent_id: parent.id,
+          position: i,
+          permission_overwrites: overwrites(ch.access, g, ids),
+        });
+        for (const embed of ch.posts) {
+          const msg = await dc<{ id: string }>("POST", `/channels/${made.id}/messages`, { embeds: [embed] });
+          if (ch.posts.length === 1) await dc("PUT", `/channels/${made.id}/pins/${msg.id}`).catch(() => null);
+        }
+        done.push(`#${ch.name}`);
+      } catch (e) {
+        failed.push(`#${ch.name} (${e instanceof Error ? e.message : "error"})`);
+      }
+    }
+    return { ok: true, done, failed };
+  } catch (e) {
+    return { ok: false, done, failed, message: e instanceof Error ? e.message : String(e) };
+  }
+}

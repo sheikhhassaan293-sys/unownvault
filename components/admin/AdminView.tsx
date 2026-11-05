@@ -11,9 +11,10 @@ import { useContent, type SiteContent } from "../providers/Settings";
 import { useToast } from "../providers/Toast";
 import { Link } from "../providers/Transition";
 import { FieldRow, type Field } from "./fields";
+import { DiscordSetup } from "./DiscordSetup";
 import { ListEditor } from "./ListEditor";
 
-const TABS = ["Site & text", "Plans", "Services", "Offers", "FAQ", "Orders", "Requests", "Backup"] as const;
+const TABS = ["Site & text", "Plans", "Services", "Offers", "FAQ", "Orders", "Requests", "Discord", "Backup"] as const;
 type Tab = (typeof TABS)[number];
 
 const uid = (p: string) => `${p}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
@@ -402,6 +403,13 @@ export function AdminView() {
       {tab === "Orders" && <OrdersAdmin orders={orders} onStatus={(id, s) => updateOrder(id, { status: s })} />}
 
       {tab === "Requests" && <RequestsAdmin requests={requests} onUpdate={updateRequest} />}
+
+      {tab === "Discord" &&
+        (live ? (
+          <DiscordSetup />
+        ) : (
+          <p className="muted">Discord setup works on the live site only.</p>
+        ))}
 
       {tab === "Backup" && (
         <section className="panel asec" style={{ maxWidth: 680 }}>
