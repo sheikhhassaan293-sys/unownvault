@@ -39,7 +39,10 @@ export function TierSwitcher() {
   const recM = tiers.find((t) => t.period === "monthly" && t.recommended);
   const saving = recW && recM ? Math.round((1 - recM.price / ((recW.price * 52) / 12)) * 100) : 0;
 
-  const rows = Array.from(new Set(list.flatMap((t) => Object.keys(t.compare))));
+  // the database doesn't keep row order, so known rows get a fixed order; any new ones go after
+  const ORDER = ["Raids", "Shiny hunts", "Shundos", "Hundo hunts", "Stardust", "Queue", "Custom request discount", "Discord progress updates"];
+  const rank = (k: string) => (ORDER.indexOf(k) === -1 ? ORDER.length : ORDER.indexOf(k));
+  const rows = Array.from(new Set(list.flatMap((t) => Object.keys(t.compare)))).sort((a, b) => rank(a) - rank(b));
   const recIndex = list.findIndex((t) => t.recommended);
 
   return (
