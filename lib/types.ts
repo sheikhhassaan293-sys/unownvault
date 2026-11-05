@@ -163,6 +163,8 @@ export type CustomRequest = {
   discord_username: string | null;
   /** how long it'll take — set by the owner with the quote */
   eta?: string | null;
+  /** guest requests only: the private key in the buyer's link */
+  access_key?: string | null;
   image_url: string | null;
   status: CustomRequestStatus;
   quote_amount: number | null;

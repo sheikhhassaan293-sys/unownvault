@@ -29,12 +29,14 @@ export function CheckoutSuccess() {
   }, []);
 
   useEffect(() => {
-    if (!ready || !user || tried.current) return;
+    if (!ready || tried.current) return;
     tried.current = true;
     const q = new URLSearchParams(window.location.search);
     const receipt = q.get("receipt_id") || q.get("payment_id") || q.get("receipt") || q.get("id");
     (async () => {
       if (receipt) await confirmCheckout(receipt).catch(() => null);
+      // guests have no order list to watch — their request page shows the progress
+      if (!user) return setGaveUp(true);
       // poll for the order the webhook creates (up to ~40s)
       for (let i = 0; i < 20; i++) {
         await reload();
@@ -71,15 +73,26 @@ export function CheckoutSuccess() {
             ? "Your plan is live. Each hunt we deliver shows up in your account, and updates come to you on Discord."
             : "You're in the queue. We'll update you on Discord as we work — once it's delivered, mark it as received in your account."}
         </p>
-        {gaveUp && !order && (
+        {gaveUp && !order && user && (
           <p className="dim" style={{ fontSize: 14, marginTop: 10 }}>
             Your payment went through — the order can take a minute to appear in your account. If it doesn&apos;t show within 10 minutes, message us on Discord.
           </p>
         )}
+        {ready && !user && (
+          <p className="dim" style={{ fontSize: 14, marginTop: 10 }}>
+            Your payment went through. Your receipt is in your email from Whop, and your request page shows the progress.
+          </p>
+        )}
         <div className="stack" style={{ marginTop: 20 }}>
-          <Link className="btn btn-block" href="/account">
-            View my orders
-          </Link>
+          {ready && !user ? (
+            <Link className="btn btn-block" href="/custom">
+              Back to my request
+            </Link>
+          ) : (
+            <Link className="btn btn-block" href="/account">
+              View my orders
+            </Link>
+          )}
           <Link className="btn ghost btn-block" href="/services">
             Back to the shop
           </Link>

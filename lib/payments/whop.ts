@@ -22,7 +22,8 @@ export function whop() {
 
 export type CheckoutKind = "subscription" | "service" | "offer" | "custom";
 export type CheckoutMeta = {
-  site_user_id: string;
+  /** missing for a guest paying a custom request through its private link */
+  site_user_id?: string;
   kind: CheckoutKind;
   item_id: string;
   item_name: string;
@@ -31,12 +32,12 @@ export type CheckoutMeta = {
   /** "none" | minutes left, e.g. "60" */
   cooldown?: string;
 };
-export type CheckoutExtras = { quantity?: number; cooldown?: Cooldown | null };
+export type CheckoutExtras = { quantity?: number; cooldown?: Cooldown | null; guestKey?: string | null };
 
 type Priced = { name: string; price: number; plan: string | null; period: "weekly" | "monthly" | null; quantity: number };
 
 /** The real price of an item, from the database. */
-export async function priceOf(kind: CheckoutKind, id: string, userId: string, qty = 1): Promise<Priced> {
+export async function priceOf(kind: CheckoutKind, id: string, userId: string | null, qty = 1, guestKey?: string | null): Promise<Priced> {
   const db = sbService();
   if (kind === "subscription") {
     const { data } = await db.from("subscription_tiers").select("name, price, period, whop_plan_id, active").eq("id", id).single();
@@ -65,8 +66,11 @@ export async function priceOf(kind: CheckoutKind, id: string, userId: string, qt
     if (!data?.published || Date.parse(data.starts_at) > now || Date.parse(data.ends_at) < now) throw new Error("This offer has ended");
     return { name: data.title, price: Number(data.price), plan: data.whop_plan_id, period: null, quantity: 1 };
   }
-  const { data } = await db.from("custom_requests").select("id, user_id, quote_amount, status, request_type, target").eq("id", id).single();
-  if (!data || data.user_id !== userId) throw new Error("Request not found");
+  const { data } = await db.from("custom_requests").select("id, user_id, access_key, quote_amount, status, request_type, target").eq("id", id).single();
+  // your own request, or a guest request opened with its private key
+  const mine = !!data && !!userId && data.user_id === userId;
+  const guest = !!data && !data.user_id && !!guestKey && !!data.access_key && data.access_key === guestKey;
+  if (!mine && !guest) throw new Error("Request not found");
   if (data.status !== "quoted" || !data.quote_amount) throw new Error("There's no quote to pay yet");
   return { name: `Custom request ${data.id}`, price: Number(data.quote_amount), plan: null, period: null, quantity: 1 };
 }
@@ -110,9 +114,9 @@ async function ensureProductId(): Promise<string> {
   return created.id;
 }
 
-export async function createWhopCheckout(kind: CheckoutKind, id: string, userId: string, returnUrl: string, extras: CheckoutExtras = {}) {
-  const item = await priceOf(kind, id, userId, extras.quantity);
-  const metadata: CheckoutMeta = { site_user_id: userId, kind, item_id: id, item_name: item.name, quantity: String(item.quantity) };
+export async function createWhopCheckout(kind: CheckoutKind, id: string, userId: string | null, returnUrl: string, extras: CheckoutExtras = {}) {
+  const item = await priceOf(kind, id, userId, extras.quantity, extras.guestKey);
+  const metadata: CheckoutMeta = { ...(userId ? { site_user_id: userId } : {}), kind, item_id: id, item_name: item.name, quantity: String(item.quantity) };
   if (kind !== "subscription" && extras.cooldown) {
     const m = Math.min(120, Math.max(0, Math.round(Number(extras.cooldown.minutes_left) || 0)));
     metadata.cooldown = extras.cooldown.has ? String(m) : "none";

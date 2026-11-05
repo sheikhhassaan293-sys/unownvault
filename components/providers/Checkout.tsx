@@ -77,7 +77,8 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
   const asksCooldown = item.kind === "service" || item.kind === "offer";
   const needsCooldown = asksCooldown && !cooldown;
   const amount = Math.round(item.price * units * 100) / 100;
-  const extras = { quantity: units, cooldown: asksCooldown ? cooldown : null };
+  const extras = { quantity: units, cooldown: asksCooldown ? cooldown : null, guestKey: item.guestKey ?? null };
+  const guestPay = item.kind === "custom" && !!item.guestKey;
 
   /**
    * Live: ask the server for a Whop checkout for this item, then send the buyer to Whop's
@@ -85,7 +86,7 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
    */
   async function startWhop() {
     if (!live) return setStep("whop");
-    if (!user) return setStep("signin");
+    if (!user && !guestPay) return setStep("signin");
     setStarting(true);
     setPayError(null);
     const r = await createCheckout(item.kind, item.id, `${window.location.origin}/checkout/success`, extras);

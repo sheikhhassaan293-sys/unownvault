@@ -6,7 +6,7 @@ import { cooldownText, type Cooldown, type CustomRequest } from "@/lib/types";
 import { CooldownQuestion } from "../Cooldown";
 import { BuyButton, useCheckout } from "../providers/Checkout";
 import { Price } from "../providers/Currency";
-import { useSession } from "../providers/Session";
+import { rememberGuestRequest, useSession } from "../providers/Session";
 import { Link } from "../providers/Transition";
 import { useOrdersOpen } from "../providers/Settings";
 import { Reveal } from "../ui";
@@ -21,7 +21,7 @@ const EMPTY: Draft = { type: REQUEST_TYPES[0], target: "", details: "", budget: 
 /* ───────────────────────────── the form ───────────────────────────── */
 
 export function RequestForm() {
-  const { user, live, ready, sendRequest, signInDiscord } = useSession();
+  const { user, live, ready, sendRequest, refreshRequests } = useSession();
   const ordersOpen = useOrdersOpen();
   const [d, setD] = useState<Draft>(EMPTY);
   const [sendError, setSendError] = useState<string | null>(null);
@@ -33,7 +33,19 @@ export function RequestForm() {
   const [preview, setPreview] = useState<string | null>(null);
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }));
   const isXp = d.type === XP_TYPE;
-  const needsLogin = live && ready && !user;
+  const guest = live && ready && !user;
+
+  // a guest's private link: /custom?req=UV-…&key=… → remember it here and open the request
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const id = q.get("req");
+    const key = q.get("key");
+    if (!id || !key || !/^UV-[A-Z0-9]{3,12}$/i.test(id) || !/^[a-f0-9]{16,128}$/i.test(key)) return;
+    rememberGuestRequest({ id, key });
+    refreshRequests().finally(() => setOpenId(id));
+    // tidy the address bar so the key isn't left on screen
+    window.history.replaceState(null, "", "/custom");
+  }, [refreshRequests]);
 
   // restore what they typed before logging in; "Get a quote" links prefill ?type=…&item=…
   useEffect(() => {
@@ -81,16 +93,6 @@ export function RequestForm() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
-    if (needsLogin) {
-      saveDraft();
-      setBusy(true);
-      const r = await signInDiscord("/custom");
-      if (r.error) {
-        setBusy(false);
-        setSendError(r.error);
-      }
-      return;
-    }
     // optional extras travel inside the details, so they show everywhere the request does
     const extra = [
       isXp && (d.cur || d.want || d.xp)
@@ -218,15 +220,16 @@ export function RequestForm() {
         </div>
         <div className="f full">
           {sendError && <span className="err">Couldn&apos;t send: {sendError}</span>}
-          <button className={`btn btn-block ${needsLogin ? "discord" : ""}`} type="submit" disabled={busy}>
-            {busy ? (needsLogin ? "Opening Discord…" : "Sending…") : needsLogin ? "Log in with Discord & send" : "Send request"}
+          <button className="btn btn-block" type="submit" disabled={busy}>
+            {busy ? "Sending…" : "Send request"}
           </button>
-          {needsLogin && (
+          {guest && (
             <p className="help" style={{ textAlign: "center", marginTop: 10 }}>
-              You need an account so you can see our quote and pay it. What you typed is saved.{" "}
+              No account needed: you&apos;ll get a private link to see your quote and pay.{" "}
               <Link className="linkish" href="/login" onClick={saveDraft}>
-                Use email instead
-              </Link>
+                Log in
+              </Link>{" "}
+              to keep it in your account instead.
             </p>
           )}
         </div>
@@ -259,7 +262,39 @@ const payItem = (r: CustomRequest) => ({
   description: `${r.request_type} · ${r.target}${r.eta ? ` · ready in ${r.eta}` : ""}. Quoted price.`,
   price: r.quote_amount ?? 0,
   currency: "USD" as const,
+  guestKey: r.access_key ?? null,
 });
+
+/** Guests: the private link to their request, with a copy button. */
+function GuestLink({ r }: { r: CustomRequest }) {
+  const [copied, setCopied] = useState(false);
+  if (!r.access_key) return null;
+  const url = `${typeof window === "undefined" ? "" : window.location.origin}/custom?req=${encodeURIComponent(r.id)}&key=${r.access_key}`;
+  return (
+    <div className="rq-link">
+      <span className="mono dim" style={{ fontSize: 11, letterSpacing: ".12em" }}>
+        YOUR PRIVATE LINK: SAVE IT TO COME BACK
+      </span>
+      <div className="rq-link-row">
+        <input readOnly value={url} onFocus={(e) => e.currentTarget.select()} aria-label="Your private request link" />
+        <button
+          type="button"
+          className="btn sm ghost"
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(url);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
+            } catch {}
+          }}
+        >
+          {copied ? "Copied ✓" : "Copy"}
+        </button>
+      </div>
+      <span className="help">This browser remembers it too. Anyone with the link can see and pay this request, so keep it to yourself.</span>
+    </div>
+  );
+}
 
 function DeleteButton({ r, onDone }: { r: CustomRequest; onDone?: () => void }) {
   const { deleteRequest } = useSession();
@@ -361,8 +396,8 @@ export function RequestDialog({ id, onClose, justSent = false }: { id: string; o
               <RequestStatus status={r.status} />
               {r.status === "new" && (
                 <p className="muted">
-                  <span className="rq-dot" aria-hidden="true" /> We&apos;re pricing it now. This window updates by itself when your quote is ready, and it&apos;s
-                  saved in your account too.
+                  <span className="rq-dot" aria-hidden="true" /> We&apos;re pricing it now. This window updates by itself when your quote is ready
+                  {r.access_key ? "." : ", and it's saved in your account too."}
                 </p>
               )}
               {r.status === "quoted" && r.quote_amount != null && (
@@ -390,15 +425,26 @@ export function RequestDialog({ id, onClose, justSent = false }: { id: string; o
               )}
               {r.status === "declined" && <p className="muted">{r.admin_reply ? `“${r.admin_reply}”` : "We can't take this one, sorry."}</p>}
               {["accepted", "in_progress", "completed"].includes(r.status) && (
-                <p className="muted">{r.eta && r.status !== "completed" ? `Expected in ${r.eta}. ` : ""}Track it in your account.</p>
+                <p className="muted">
+                  {r.eta && r.status !== "completed" ? `Expected in ${r.eta}. ` : ""}
+                  {r.access_key ? "Check back on this link for updates." : "Track it in your account."}
+                </p>
               )}
             </div>
 
+            <GuestLink r={r} />
+
             <div className="rq-actions">
               <DeleteButton r={r} onDone={close} />
-              <Link className="linkish" href="/account" onClick={close}>
-                My account
-              </Link>
+              {r.access_key ? (
+                <Link className="linkish" href="/login" onClick={close}>
+                  Log in to save it to an account
+                </Link>
+              ) : (
+                <Link className="linkish" href="/account" onClick={close}>
+                  My account
+                </Link>
+              )}
             </div>
           </>
         )}
@@ -440,8 +486,8 @@ export function PastRequests() {
   const { user, requests } = useSession();
   // (an admin's session holds everyone's requests — show only your own here)
   const mine = requests.filter((r) => !user?.id || !r.user_id || r.user_id === user.id);
-  useQuotePolling(!!user && mine.some((r) => r.status === "new"));
-  if (!user || !mine.length) return null;
+  useQuotePolling(mine.some((r) => r.status === "new"));
+  if (!mine.length) return null;
   return (
     <section className="sec" aria-labelledby="past-h">
       <div className="head">

@@ -446,6 +446,9 @@
   .rq-state > .btn, .rq-state > .co-sum { justify-self: stretch; }
   .rq-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--acc); margin-right: 6px; vertical-align: middle; animation: uv-pulse 1.6s ease-in-out infinite; }
   .rq-actions { display: flex; justify-content: space-between; gap: 12px; margin-top: 18px; }
+  .rq-link { display: grid; gap: 8px; margin-top: 16px; padding: 12px 14px; border: 1px dashed rgba(var(--rgb), 0.4); border-radius: 4px; }
+  .rq-link-row { display: flex; gap: 8px; }
+  .rq-link-row input { flex: 1; min-width: 0; font-family: var(--fm); font-size: 12px; }
   .rq-open { background: none; border: 0; padding: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
   .rq-open:hover { color: var(--acc); }
   /* reviews (from Eldorado) */

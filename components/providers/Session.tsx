@@ -76,6 +76,31 @@ function store(key: string, v: unknown) {
     localStorage.setItem(key, JSON.stringify(v));
   } catch {}
 }
+/* Guest custom requests: this browser remembers {id, key} for each one (the key is the private link). */
+const GUEST_KEY = "uv-guest-requests";
+type GuestRef = { id: string; key: string };
+export function guestRefs(): GuestRef[] {
+  const v = load<GuestRef[]>(GUEST_KEY, []);
+  return Array.isArray(v) ? v.filter((x) => x && typeof x.id === "string" && typeof x.key === "string").slice(0, 20) : [];
+}
+export function rememberGuestRequest(ref: GuestRef) {
+  store(GUEST_KEY, [ref, ...guestRefs().filter((x) => x.id !== ref.id)].slice(0, 20));
+}
+function forgetGuestRequest(id: string) {
+  store(GUEST_KEY, guestRefs().filter((x) => x.id !== id));
+}
+async function fetchGuestRequests(): Promise<CustomRequest[]> {
+  const refs = guestRefs();
+  if (!refs.length) return [];
+  const { data, error } = await sb().rpc("get_guest_requests", { p_items: refs });
+  if (error) return [];
+  const rows = normalizeRows(data as CustomRequest[], [], ["budget", "quote_amount"]) as CustomRequest[];
+  // forget links whose request was deleted or moved into an account
+  const alive = new Set(rows.map((r) => r.id));
+  store(GUEST_KEY, refs.filter((x) => alive.has(x.id)));
+  return rows;
+}
+
 const callbackUrl = (next = "/") => `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
 const friendly = (msg: string) =>
   /invalid login/i.test(msg)
@@ -106,9 +131,15 @@ export function SessionProvider({ demoOrders, demoRequests, children }: { demoOr
       setUser(null);
       setNeedsUsername(false);
       setOrders([]);
-      setRequests([]);
+      setRequests(await fetchGuestRequests());
       setSubs([]);
       return;
+    }
+    // requests sent as a guest from this browser move into the account
+    const refs = guestRefs();
+    if (refs.length) {
+      const { error } = await db.rpc("claim_guest_requests", { p_items: refs });
+      if (!error) store(GUEST_KEY, []);
     }
     const role = (await syncAdminRole().catch(() => null)) ?? "user";
     const { data: profile } = await db.from("profiles").select("username, role, priorities").eq("id", u.id).single();
@@ -271,7 +302,7 @@ export function SessionProvider({ demoOrders, demoRequests, children }: { demoOr
       const up = await db.storage.from("request-images").upload(path, r.image, { contentType: r.image.type });
       if (!up.error) image_url = path;
     }
-    const { data, error } = await db.rpc("submit_custom_request", {
+    const { data, error } = await db.rpc("send_custom_request", {
       p_type: r.request_type,
       p_target: r.target,
       p_details: r.details,
@@ -280,7 +311,9 @@ export function SessionProvider({ demoOrders, demoRequests, children }: { demoOr
       p_image_url: image_url,
     });
     if (error) throw new Error(error.message);
-    const saved = { ...base, id: data as string, image_url };
+    const res = data as { id: string; key: string | null };
+    if (res.key) rememberGuestRequest({ id: res.id, key: res.key });
+    const saved: CustomRequest = { ...base, id: res.id, image_url, access_key: res.key };
     setRequests((prev) => [saved, ...prev]);
     return saved;
   }, []);
@@ -299,8 +332,10 @@ export function SessionProvider({ demoOrders, demoRequests, children }: { demoOr
 
   const deleteRequest = useCallback(async (id: string): Promise<Result> => {
     if (LIVE) {
-      const { error } = await sb().rpc("delete_custom_request", { p_id: id });
+      const key = guestRefs().find((x) => x.id === id)?.key ?? null;
+      const { error } = await sb().rpc("remove_custom_request", { p_id: id, p_key: key });
       if (error) return { error: error.message };
+      forgetGuestRequest(id);
     }
     setRequests((prev) => {
       const next = prev.filter((r) => r.id !== id);
@@ -312,7 +347,10 @@ export function SessionProvider({ demoOrders, demoRequests, children }: { demoOr
 
   const refreshRequests = useCallback(async () => {
     if (!LIVE) return;
-    const { data, error } = await sb().from("custom_requests").select("*").order("created_at", { ascending: false }).limit(200);
+    const db = sb();
+    const { data: auth } = await db.auth.getUser();
+    if (!auth.user) return setRequests(await fetchGuestRequests());
+    const { data, error } = await db.from("custom_requests").select("*").order("created_at", { ascending: false }).limit(200);
     if (!error) setRequests(normalizeRows(data, [], ["budget", "quote_amount"]) as CustomRequest[]);
   }, []);
 

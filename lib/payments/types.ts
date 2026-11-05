@@ -26,6 +26,8 @@ export type CheckoutItem = {
   /** buyer picks how many (price is per one) */
   allowQuantity?: boolean;
   maxQuantity?: number;
+  /** a guest paying their custom request: the private key from their link */
+  guestKey?: string | null;
 };
 
 export type CheckoutSession =

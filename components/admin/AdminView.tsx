@@ -709,7 +709,11 @@ function RequestCard({ r, onUpdate, toast }: { r: CustomRequest; onUpdate: (id: 
       <p className="mono dim" style={{ fontSize: 12, margin: "8px 0 16px" }}>
         Budget: {r.budget != null ? `$${r.budget}` : "—"}
         {r.deadline ? ` · Deadline: ${new Date(r.deadline).toLocaleDateString("en-GB")}` : ""}
-        {!r.user_id ? " · ⚠ sent without an account (old guest request): they can't pay on the site" : ""}
+        {!r.user_id
+          ? r.access_key
+            ? " · Guest: sees your quote and pays through their private link"
+            : " · ⚠ old guest request without a link: they can't see your quote or pay on the site"
+          : ""}
       </p>
       <div className="form">
         <div className="f">

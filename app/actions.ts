@@ -59,7 +59,7 @@ export async function createCheckout(
   kind: "subscription" | "service" | "offer" | "custom",
   id: string,
   returnUrl: string,
-  extras: { quantity?: number; cooldown?: { has: boolean; minutes_left: number | null } | null } = {},
+  extras: { quantity?: number; cooldown?: { has: boolean; minutes_left: number | null } | null; guestKey?: string | null } = {},
 ): Promise<CheckoutResult> {
   if (!LIVE) return { ok: false, error: "demo" };
   const { whopConfigured, createWhopCheckout } = await import("@/lib/payments/whop");
@@ -68,12 +68,13 @@ export async function createCheckout(
     return { ok: false, error: "Payments aren't switched on yet — message us on Discord to order." };
   }
   const { db, user } = await currentUser();
-  if (!user) return { ok: false, error: "signin" };
+  // guests can only pay a custom request they hold the private key for
+  if (!user && !(kind === "custom" && extras.guestKey)) return { ok: false, error: "signin" };
   const { data: settings } = await db.from("site_settings").select("maintenance, queue_open").eq("id", 1).single();
   if (settings?.maintenance) return { ok: false, error: "Checkout is paused for maintenance — try again soon." };
   if (settings?.queue_open === false) return { ok: false, error: "Orders are paused right now — check back soon." };
   try {
-    const r = await createWhopCheckout(kind, id, user.id, returnUrl, extras);
+    const r = await createWhopCheckout(kind, id, user?.id ?? null, returnUrl, extras);
     console.info("[checkout] created", { kind, id, session: r.sessionId, hasUrl: !!r.purchaseUrl });
     return { ok: true, sessionId: r.sessionId, purchaseUrl: r.purchaseUrl };
   } catch (e) {
@@ -87,9 +88,8 @@ export async function createCheckout(
 
 /** Called by the success popup with Whop's receipt id: records the order right away (the webhook does the same). */
 export async function confirmCheckout(receiptId: string): Promise<{ orderId: string | null; status: string }> {
+  // works for guests too: it only re-reads the payment from Whop and records it once
   if (!LIVE || !receiptId) return { orderId: null, status: "unknown" };
-  const { user } = await currentUser();
-  if (!user) return { orderId: null, status: "unknown" };
   try {
     const { recordWhopPayment } = await import("@/lib/payments/whop");
     const r = await recordWhopPayment(receiptId);
