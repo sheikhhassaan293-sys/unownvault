@@ -44,9 +44,13 @@ export function CheckoutSuccess() {
     })();
   }, [ready, user, reload]);
 
-  const [openedAt] = useState(() => Date.now());
-  const since = pending?.startedAt ?? openedAt - 15 * 60_000;
-  const order = orders.find((o) => o.provider === "whop" && Date.parse(o.created_at) >= since - 60_000);
+  const [openedAt, setOpenedAt] = useState<number | null>(null);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- time is only known in the browser
+    setOpenedAt(Date.now());
+  }, []);
+  const since = pending?.startedAt ?? (openedAt ?? 0) - 15 * 60_000;
+  const order = openedAt == null ? undefined : orders.find((o) => o.provider === "whop" && Date.parse(o.created_at) >= since - 60_000);
   const isSub = (order?.type ?? pending?.kind) === "subscription";
 
   return (
