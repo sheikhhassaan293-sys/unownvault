@@ -8,7 +8,7 @@
  * means each person only ever loads their own rows (admins load everyone's).
  * Both modes expose the same functions, so pages don't care which one is running.
  */
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { syncAdminRole } from "@/app/actions";
 import { sb } from "@/lib/supabase/browser";
 import { LIVE } from "@/lib/supabase/env";
@@ -353,6 +353,67 @@ export function SessionProvider({ demoOrders, demoRequests, children }: { demoOr
     const { data, error } = await db.from("custom_requests").select("*").order("created_at", { ascending: false }).limit(200);
     if (!error) setRequests(normalizeRows(data, [], ["budget", "quote_amount"]) as CustomRequest[]);
   }, []);
+
+  const refreshOrders = useCallback(async () => {
+    if (!LIVE) return;
+    const { data, error } = await sb().from("orders").select("*").order("created_at", { ascending: false }).limit(200);
+    if (!error) setOrders(normalizeRows(data, ["amount"]) as Order[]);
+  }, []);
+
+  /*
+   * Live updates, so nobody has to reload:
+   *  - signed in: Supabase Realtime pushes changes to requests/orders (row-level security means
+   *    buyers only get their own rows, admins get everything)
+   *  - backup for everyone (and the only way for guests): re-check every 20s while the tab is
+   *    visible and something is waiting, and right away when the tab comes back into view
+   */
+  const uid = user?.id ?? null;
+  const admin = user?.role === "admin";
+  const waitingRef = useRef(false);
+  useEffect(() => {
+    waitingRef.current = requests.some((r) => ["new", "quoted", "accepted", "in_progress"].includes(r.status));
+  }, [requests]);
+  useEffect(() => {
+    if (!LIVE || !ready) return;
+    const db = sb();
+    let tReq: ReturnType<typeof setTimeout> | undefined;
+    let tOrd: ReturnType<typeof setTimeout> | undefined;
+    const soonRequests = () => {
+      clearTimeout(tReq);
+      tReq = setTimeout(refreshRequests, 300);
+    };
+    const soonOrders = () => {
+      clearTimeout(tOrd);
+      tOrd = setTimeout(refreshOrders, 300);
+    };
+    const channel = uid
+      ? db
+          .channel(`uv-live-${uid}`)
+          .on("postgres_changes", { event: "*", schema: "public", table: "custom_requests" }, soonRequests)
+          .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, soonOrders)
+          .subscribe()
+      : null;
+    const check = () => {
+      if (document.visibilityState !== "visible") return;
+      const guestWaiting = !uid && guestRefs().length > 0;
+      if (admin || waitingRef.current || guestWaiting) refreshRequests();
+      if (admin) refreshOrders();
+    };
+    const timer = setInterval(check, 20_000);
+    const onBack = () => {
+      if (document.visibilityState === "visible") check();
+    };
+    document.addEventListener("visibilitychange", onBack);
+    window.addEventListener("focus", onBack);
+    return () => {
+      clearInterval(timer);
+      clearTimeout(tReq);
+      clearTimeout(tOrd);
+      document.removeEventListener("visibilitychange", onBack);
+      window.removeEventListener("focus", onBack);
+      if (channel) db.removeChannel(channel);
+    };
+  }, [ready, uid, admin, refreshRequests, refreshOrders]);
 
   const savePriorities = useCallback(async (p: Priorities): Promise<Result> => {
     const clean: Priorities = {};
