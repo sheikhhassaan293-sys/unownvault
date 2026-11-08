@@ -78,6 +78,8 @@ export function ServiceGrid() {
                 )}
                 <div className="cat">
                   <ShardBullet element="lava" />
+                  {/* Dex-style number: stable, from the full list (not the filtered one) */}
+                  <span className="dex">#{String(services.indexOf(s) + 1).padStart(3, "0")}</span>
                   {feat ? `Featured · ${label(s.category)}` : label(s.category)}
                 </div>
                 <h3 className="h3">{s.name}</h3>

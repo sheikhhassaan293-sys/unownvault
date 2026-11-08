@@ -424,7 +424,7 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
               <circle cx="26" cy="26" r="24" fill="none" stroke="currentColor" strokeWidth="2" />
               <motion.path d="M15 27l7 7 15-16" fill="none" stroke="currentColor" strokeWidth="3" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: 0.15, duration: 0.4 }} />
             </motion.svg>
-            <h3 className="h3">Payment successful</h3>
+            <h3 className="h3">Gotcha! Payment successful</h3>
             <div className="success-meta">
               <span className="mono dim">ORDER #{orderId}</span>
               <span className="badge solid">{isSub ? "Plan active" : "Pending delivery"}</span>

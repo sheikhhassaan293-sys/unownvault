@@ -62,7 +62,7 @@ export function CheckoutSuccess() {
           <circle cx="26" cy="26" r="24" fill="none" stroke="currentColor" strokeWidth="2" />
           <motion.path d="M15 27l7 7 15-16" fill="none" stroke="currentColor" strokeWidth="3" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: 0.15, duration: 0.4 }} />
         </svg>
-        <h1 className="h3">Payment successful</h1>
+        <h1 className="h3">Gotcha! Payment successful</h1>
         {pending?.name && <p className="mono dim" style={{ fontSize: 13, marginTop: 6 }}>{pending.name}</p>}
         <div className="success-meta">
           {order ? <span className="mono dim">ORDER #{order.id}</span> : <span className="mono dim">{gaveUp ? "ORDER ON ITS WAY" : "CONFIRMING…"}</span>}
