@@ -22,6 +22,10 @@ export const COPY_FIELDS: CopyField[] = [
   { page: "Custom", key: "custom_points", label: "Form bullet points", kind: "list" },
   { page: "Updates", key: "updates_title", label: "Page heading", kind: "text" },
   { page: "Footer", key: "footer_tagline", label: "Footer tagline", kind: "text" },
+  // what buyers pay — shown on the services/plans pages, at checkout and with quotes (empty = hidden)
+  { page: "Prices & tax", key: "price_note", label: "Price note (services, plans, quotes)", kind: "text" },
+  { page: "Prices & tax", key: "pay_whop_note", label: "Checkout: card / PayPal / crypto via Whop", kind: "text" },
+  { page: "Prices & tax", key: "pay_manual_note", label: "Checkout: other payment methods", kind: "text" },
 ];
 
 export const DEFAULT_COPY: Record<string, string> = {
@@ -42,6 +46,11 @@ export const DEFAULT_COPY: Record<string, string> = {
   custom_points: "Quotes in USD, no surprises later\nPay only after you accept the quote\nProgress updates on Discord\nAnything that's in the game right now",
   updates_title: "Limited drops.\n*Clock's running.*",
   footer_tagline: "Hunts, dust and raids for Pokémon GO trainers who'd rather not grind.",
+  price_note:
+    "Prices are in USD. Depending on your country, sales tax or VAT may be added at checkout. You always see the exact total before you pay, and we never add any other fees.",
+  pay_whop_note:
+    "Card, Apple Pay, Google Pay, PayPal or crypto (secure checkout by Whop): the price above, plus sales tax or VAT only if your country charges it. Whop shows the final total before you confirm.",
+  pay_manual_note: "Other payment methods: you pay exactly the price above. No tax or fees added.",
 };
 
 export const parseSteps = (s: string) =>

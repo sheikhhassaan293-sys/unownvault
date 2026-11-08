@@ -439,7 +439,16 @@
   .cd-opt { font-family: var(--fm); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; min-width: 64px; min-height: 40px; padding: 0 14px; border: 1px solid rgba(var(--rgb), 0.3); border-radius: 3px; color: var(--muted); background: none; }
   .cd-opt:hover { color: var(--text); border-color: rgba(var(--rgb), 0.6); }
   .cd-opt.on { background: var(--acc); border-color: var(--acc); color: var(--on-acc); }
-  .cd-banner { margin: -12px 0 24px; }
+  .cd-banner { margin: -12px 0 24px; display: grid; gap: 4px; }
+  .price-note { max-width: 760px; }
+  .price-note.center { margin: 28px auto 0; text-align: center; }
+  /* checkout: what you'll pay */
+  .pay-break { border: 1px solid var(--line); border-radius: 4px; padding: 12px 14px; margin: 0 0 16px; display: grid; gap: 6px; }
+  .pay-break-h { font-size: 11px; letter-spacing: 0.14em; margin-bottom: 2px; }
+  .pay-row { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+  .pay-row > :first-child { white-space: nowrap; }
+  .pay-row > :last-child { text-align: right; }
+  .pay-break-note { margin-top: 4px; }
   .svc .each { font-size: 12px; font-weight: 400; color: var(--dim); }
   /* custom request popup */
   .rq-state { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 16px; display: grid; gap: 10px; justify-items: start; }

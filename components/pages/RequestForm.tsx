@@ -8,7 +8,7 @@ import { BuyButton, useCheckout } from "../providers/Checkout";
 import { Price } from "../providers/Currency";
 import { rememberGuestRequest, useSession } from "../providers/Session";
 import { Link } from "../providers/Transition";
-import { useOrdersOpen } from "../providers/Settings";
+import { PriceNote, useOrdersOpen } from "../providers/Settings";
 import { Reveal } from "../ui";
 
 export const REQUEST_TYPES = ["Shundo hunt", "Shiny hunt", "Stardust", "XP / levelling", "Raids", "Grunt boosting", "Event package", "Something else"];
@@ -411,6 +411,7 @@ export function RequestDialog({ id, onClose, justSent = false }: { id: string; o
                     </b>
                   </div>
                   {r.admin_reply && <p className="muted">“{r.admin_reply}”</p>}
+                  <PriceNote />
                   <button
                     className="btn btn-block"
                     style={{ marginTop: 14 }}

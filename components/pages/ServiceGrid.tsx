@@ -3,7 +3,7 @@
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
 import { useState } from "react";
 import type { ServiceCategory } from "@/lib/types";
-import { useContent, useOrdersOpen, visible } from "../providers/Settings";
+import { PriceNote, useContent, useOrdersOpen, visible } from "../providers/Settings";
 import { BuyButton } from "../providers/Checkout";
 import { Price } from "../providers/Currency";
 import { ShardBullet } from "../ShardBullet";
@@ -49,9 +49,10 @@ export function ServiceGrid() {
         ))}
       </div>
 
-      <p className="help cd-banner">
-        ⏱ Delivery times are subject to your cooldown timer — we&apos;ll ask about it when you order.
-      </p>
+      <div className="cd-banner">
+        <p className="help">⏱ Delivery times are subject to your cooldown timer — we&apos;ll ask about it when you order.</p>
+        {ordersOpen && <PriceNote />}
+      </div>
 
       <motion.div layout className="sgrid">
         <AnimatePresence mode="popLayout" initial={false}>

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { TierSwitcher } from "@/components/pages/TierSwitcher";
-import { CopyText } from "@/components/providers/Settings";
+import { CopyText, PriceNote } from "@/components/providers/Settings";
 import { Reveal } from "@/components/ui";
 
 export const metadata: Metadata = {
@@ -21,6 +21,7 @@ export default function SubscriptionsPage() {
         </Reveal>
       </div>
       <TierSwitcher />
+      <PriceNote className="help price-note center" />
     </div>
   );
 }

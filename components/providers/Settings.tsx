@@ -230,6 +230,18 @@ export function useSettings() {
 export const visible = <T extends { active?: boolean; sort_order?: number }>(rows: T[]) =>
   rows.filter((r) => r.active !== false).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
 
+/** "Prices are in USD… tax may be added… no other fees" — editable in Admin → Site & text (empty hides it). */
+export function PriceNote({ className = "help price-note" }: { className?: string }) {
+  const text = useCopy("price_note");
+  if (!text) return null;
+  return (
+    <p className={className}>
+      <span aria-hidden="true">🧾 </span>
+      <Rich text={text} />
+    </p>
+  );
+}
+
 /** Drop-in editable text for server pages: <CopyText k="subs_title" /> */
 export function CopyText({ k }: { k: string }) {
   const text = useCopy(k);

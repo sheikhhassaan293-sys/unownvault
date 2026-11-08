@@ -10,7 +10,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import type { CheckoutItem } from "@/lib/payments/types";
 import { useMoney } from "./Currency";
-import { useOrdersOpen, useSettings } from "./Settings";
+import { useCopy, useOrdersOpen, useSettings } from "./Settings";
 import { newId, useSession } from "./Session";
 import { useThemedNavigate } from "./Transition";
 import { createCheckout } from "@/app/actions";
@@ -174,6 +174,9 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
   const showManual = settings.manual_payments_enabled;
   const total = money(amount, item.currency);
   const charged = exact(amount, item.currency);
+  const whopNote = useCopy("pay_whop_note");
+  const manualNote = useCopy("pay_manual_note");
+  const per = item.period === "weekly" ? "week" : item.period === "monthly" ? "month" : null;
 
   return (
     <motion.div
@@ -208,7 +211,7 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
         {step !== "success" && (
         <div className="co-sum">
           <span className="mono dim" style={{ fontSize: 12, letterSpacing: ".12em" }}>
-            {item.priceIsFrom ? "FROM" : "TOTAL"}
+            {item.priceIsFrom ? "FROM" : "PRICE"}
             {units > 1 ? ` · ${units} × ${money(item.price, item.currency)}` : ""}
             {item.period ? ` / ${item.period === "weekly" ? "WEEK" : "MONTH"}` : ""}
           </span>
@@ -259,6 +262,33 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
               </div>
             )}
             {asksCooldown && <CooldownQuestion value={cooldown} onChange={setCooldown} />}
+            {/* no hidden charges: exactly what gets added, and when */}
+            <div className="pay-break" aria-label="What you'll pay">
+              <div className="mono dim pay-break-h">WHAT YOU&apos;LL PAY</div>
+              <div className="pay-row">
+                <span>Price</span>
+                <b>
+                  {charged}
+                  {per ? ` / ${per}` : ""}
+                </b>
+              </div>
+              <div className="pay-row">
+                <span>Tax / VAT</span>
+                <span className="dim">only if your country has it</span>
+              </div>
+              <div className="pay-row">
+                <span>Our fees</span>
+                <span className="acc">None</span>
+              </div>
+              {per && (
+                <div className="pay-row">
+                  <span>Renews</span>
+                  <span className="dim">every {per} until you cancel</span>
+                </div>
+              )}
+              {whopNote && <p className="help pay-break-note">{whopNote}</p>}
+              {showManual && manualNote && <p className="help pay-break-note">{manualNote}</p>}
+            </div>
             <div className="paychips">
               <span>CARD</span>
               <span>APPLE PAY</span>
@@ -272,12 +302,12 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
                 : starting
                   ? "Opening secure checkout…"
                   : needsCooldown
-                    ? "Answer the cooldown question first"
+                    ? "Answer the cooldown first"
                     : `Pay ${charged}`}
             </button>
             {live && (
               <p className="mono dim" style={{ fontSize: 12, textAlign: "center", marginTop: 10 }}>
-                You&apos;ll pay on Whop&apos;s secure page, then come straight back here.
+                Whop&apos;s secure page shows your final total, including any tax, before you confirm. Then you come straight back here.
               </p>
             )}
             {payError && (
@@ -360,6 +390,11 @@ function CheckoutDialog({ item, step, setStep, onClose }: { item: CheckoutItem; 
               submitManual();
             }}
           >
+            {manualNote && (
+              <p className="help" style={{ marginBottom: 4 }}>
+                {manualNote} Send exactly <b>{charged}</b>.
+              </p>
+            )}
             <div className="instructions">{settings.payment_instructions}</div>
             <div className="f">
               <label htmlFor="txn">Transaction ID</label>
