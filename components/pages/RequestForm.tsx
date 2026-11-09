@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cooldownText, type Cooldown, type CustomRequest } from "@/lib/types";
 import { CooldownQuestion } from "../Cooldown";
+import { OrderChat, useBuyerUnread } from "../OrderChat";
 import { BuyButton, useCheckout } from "../providers/Checkout";
 import { Price } from "../providers/Currency";
 import { rememberGuestRequest, useSession } from "../providers/Session";
@@ -433,6 +434,13 @@ export function RequestDialog({ id, onClose, justSent = false }: { id: string; o
               )}
             </div>
 
+            <div className="rq-chat">
+              <span className="mono dim" style={{ fontSize: 12, letterSpacing: ".08em" }}>
+                CHAT WITH US ABOUT THIS ORDER
+              </span>
+              <OrderChat threadId={r.id} guestKey={r.access_key ?? null} />
+            </div>
+
             <GuestLink r={r} />
 
             <div className="rq-actions">
@@ -454,7 +462,7 @@ export function RequestDialog({ id, onClose, justSent = false }: { id: string; o
   );
 }
 
-export function RequestRow({ r }: { r: CustomRequest }) {
+export function RequestRow({ r, unread = 0 }: { r: CustomRequest; unread?: number }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="req">
@@ -470,6 +478,10 @@ export function RequestRow({ r }: { r: CustomRequest }) {
       </div>
       <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
         <RequestStatus status={r.status} />
+        <button type="button" className="linkish chat-btn" onClick={() => setOpen(true)}>
+          💬 Chat
+          {unread > 0 && <i className="chat-dot" aria-label={`${unread} unread`} />}
+        </button>
         {r.status === "quoted" && r.quote_amount != null && (
           <BuyButton className="btn sm" item={payItem(r)}>
             Pay <Price amount={r.quote_amount} />
@@ -488,6 +500,7 @@ export function PastRequests() {
   // (an admin's session holds everyone's requests — show only your own here)
   const mine = requests.filter((r) => !user?.id || !r.user_id || r.user_id === user.id);
   useQuotePolling(mine.some((r) => r.status === "new"));
+  const { unread } = useBuyerUnread(mine.map((r) => ({ id: r.id, key: r.access_key ?? null })));
   if (!mine.length) return null;
   return (
     <section className="sec" aria-labelledby="past-h">
@@ -500,7 +513,7 @@ export function PastRequests() {
       </div>
       <Reveal className="reqlist">
         {mine.map((r) => (
-          <RequestRow key={r.id} r={r} />
+          <RequestRow key={r.id} r={r} unread={unread[r.id] ?? 0} />
         ))}
       </Reveal>
     </section>

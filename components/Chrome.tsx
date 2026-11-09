@@ -118,7 +118,10 @@ export function Footer() {
         <Link href="/reviews">Reviews</Link>
         <Link href="/#faq">FAQ</Link>
         <DiscordLink className="">Discord</DiscordLink>
-        <a href={`mailto:${contact_email}`}>{contact_email}</a>
+        {/* only a real address gets a link (an unfinished one would open a broken email) */}
+        {/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact_email ?? "") && <a href={`mailto:${contact_email}`}>{contact_email}</a>}
+        <Link href="/terms">Terms &amp; refunds</Link>
+        <Link href="/terms#privacy">Privacy</Link>
         <Link href="/account">Your account</Link>
         <Link href="/admin">Admin</Link>
         {install && (

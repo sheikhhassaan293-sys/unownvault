@@ -14,6 +14,7 @@ import { FieldRow, type Field } from "./fields";
 import { PrioritySummary, usePokedex } from "../PriorityPicker";
 import { DiscordSetup } from "./DiscordSetup";
 import { discordAnnounceOrder } from "@/app/actions";
+import { ChatButton, threadOfOrder, useStaffUnread } from "../OrderChat";
 import { ListEditor } from "./ListEditor";
 
 const TABS = ["Site & text", "Plans", "Services", "Offers", "FAQ", "Orders", "Requests", "Discord", "Backup"] as const;
@@ -151,6 +152,8 @@ export function AdminView() {
   const [loadedFull, setLoadedFull] = useState(!LIVE);
   const { orders, updateOrder, requests, updateRequest } = useSession();
   const toast = useToast();
+  const { unread: chatUnread, refresh: refreshChatUnread } = useStaffUnread(LIVE && isAdmin);
+  const seen = () => setTimeout(refreshChatUnread, 1500);
 
   // live: admins load every row, including hidden plans/services and unpublished offers
   useEffect(() => {
@@ -241,8 +244,9 @@ export function AdminView() {
         {TABS.map((t) => (
           <button key={t} className={tab === t ? "on" : ""} aria-pressed={tab === t} onClick={() => pick(t)}>
             {t}
-            {t === "Orders" && orders.some((o) => o.status === "pending" || o.status === "awaiting_confirmation") && <i className="dot" />}
-            {t === "Requests" && requests.some((r) => r.status === "new") && <i className="dot" />}
+            {t === "Orders" &&
+              orders.some((o) => o.status === "pending" || o.status === "awaiting_confirmation" || (o.type !== "custom" && chatUnread[o.id])) && <i className="dot" />}
+            {t === "Requests" && requests.some((r) => r.status === "new" || chatUnread[r.id]) && <i className="dot" />}
           </button>
         ))}
       </nav>
@@ -412,9 +416,23 @@ export function AdminView() {
         />
       )}
 
-      {tab === "Orders" && <OrdersAdmin orders={orders} onStatus={(id, s) => updateOrder(id, { status: s })} />}
+      {tab === "Orders" && (
+        <OrdersAdmin
+          orders={orders}
+          unread={chatUnread}
+          onSeen={seen}
+          onStatus={async (id, s) => {
+            const o = orders.find((x) => x.id === id);
+            // tell the buyer in the chat before it closes
+            if (o && s === "completed" && o.status !== "completed" && o.type !== "subscription") {
+              await staffSay(threadOfOrder(o), "✅ Your order is marked as delivered. Thanks for ordering! This chat is now closed. If anything's wrong, message us on Discord.");
+            }
+            updateOrder(id, { status: s });
+          }}
+        />
+      )}
 
-      {tab === "Requests" && <RequestsAdmin requests={requests} onUpdate={updateRequest} />}
+      {tab === "Requests" && <RequestsAdmin requests={requests} onUpdate={updateRequest} unread={chatUnread} onSeen={seen} />}
 
       {tab === "Discord" &&
         (live ? (
@@ -541,6 +559,15 @@ function CategoryEditor({
   );
 }
 
+/** Post a staff message into an order's chat (used for automatic "quote ready" / "delivered" notes). */
+async function staffSay(threadId: string, body: string) {
+  if (!LIVE) return;
+  await sb().rpc("chat_send", { p_thread: threadId, p_body: body }).then(
+    () => null,
+    () => null,
+  );
+}
+
 /** Orders made before auto-posting, or manual payments you've confirmed: post them to Discord by hand. */
 function PostOrderButton({ o }: { o: Order }) {
   const [state, setState] = useState<string | null>(o.discord_posted_at ? "✓ In Discord" : null);
@@ -566,7 +593,17 @@ function PostOrderButton({ o }: { o: Order }) {
   );
 }
 
-function OrdersAdmin({ orders, onStatus }: { orders: Order[]; onStatus: (id: string, s: Order["status"]) => void }) {
+function OrdersAdmin({
+  orders,
+  onStatus,
+  unread,
+  onSeen,
+}: {
+  orders: Order[];
+  onStatus: (id: string, s: Order["status"]) => void;
+  unread: Record<string, number>;
+  onSeen: () => void;
+}) {
   const [filter, setFilter] = useState<"open" | "all">("open");
   const { nameOf } = usePokedex();
   const open = (o: Order) => !["completed", "refunded"].includes(o.status);
@@ -621,6 +658,12 @@ function OrdersAdmin({ orders, onStatus }: { orders: Order[]; onStatus: (id: str
                     )}
                     <br />
                     <PostOrderButton o={o} />
+                    {o.type !== "subscription" && (
+                      <>
+                        {" · "}
+                        <ChatButton threadId={threadOfOrder(o)} title={`${o.item_name} · ${o.id}`} unread={unread[threadOfOrder(o)] ?? 0} onOpened={onSeen} />
+                      </>
+                    )}
                     {o.priorities && Object.values(o.priorities).some((l) => l?.length) && (
                       <details className="pri-details">
                         <summary className="linkish">Priority Pokémon</summary>
@@ -672,19 +715,41 @@ function OrdersAdmin({ orders, onStatus }: { orders: Order[]; onStatus: (id: str
   );
 }
 
-function RequestsAdmin({ requests, onUpdate }: { requests: CustomRequest[]; onUpdate: (id: string, p: Partial<CustomRequest>) => void }) {
+function RequestsAdmin({
+  requests,
+  onUpdate,
+  unread,
+  onSeen,
+}: {
+  requests: CustomRequest[];
+  onUpdate: (id: string, p: Partial<CustomRequest>) => void;
+  unread: Record<string, number>;
+  onSeen: () => void;
+}) {
   const toast = useToast();
   return (
     <div className="stack" style={{ gap: 14 }}>
       {requests.length === 0 && <p className="empty">No custom requests yet.</p>}
       {requests.map((r) => (
-        <RequestCard key={r.id} r={r} onUpdate={onUpdate} toast={toast} />
+        <RequestCard key={r.id} r={r} onUpdate={onUpdate} toast={toast} unread={unread[r.id] ?? 0} onSeen={onSeen} />
       ))}
     </div>
   );
 }
 
-function RequestCard({ r, onUpdate, toast }: { r: CustomRequest; onUpdate: (id: string, p: Partial<CustomRequest>) => void; toast: (m: string) => void }) {
+function RequestCard({
+  r,
+  onUpdate,
+  toast,
+  unread,
+  onSeen,
+}: {
+  r: CustomRequest;
+  onUpdate: (id: string, p: Partial<CustomRequest>) => void;
+  toast: (m: string) => void;
+  unread: number;
+  onSeen: () => void;
+}) {
   const [amount, setAmount] = useState(r.quote_amount?.toString() ?? "");
   const [reply, setReply] = useState(r.admin_reply ?? "");
   const [eta, setEta] = useState(r.eta ?? "");
@@ -699,7 +764,10 @@ function RequestCard({ r, onUpdate, toast }: { r: CustomRequest; onUpdate: (id: 
             {r.request_type} · {r.target}
           </h2>
         </div>
-        <span className={`badge ${r.status === "new" ? "solid" : ""}`}>{r.status.replace("_", " ")}</span>
+        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <ChatButton threadId={r.id} title={`${r.target} · ${r.id}`} unread={unread} onOpened={onSeen} />
+          <span className={`badge ${r.status === "new" ? "solid" : ""}`}>{r.status.replace("_", " ")}</span>
+        </div>
       </div>
       {r.details && (
         <p className="muted" style={{ whiteSpace: "pre-line" }}>
@@ -744,6 +812,8 @@ function RequestCard({ r, onUpdate, toast }: { r: CustomRequest; onUpdate: (id: 
             disabled={!amount}
             onClick={() => {
               onUpdate(r.id, { quote_amount: Number(amount), admin_reply: reply || null, eta: eta.trim() || null, status: "quoted" });
+              // the quote also lands in the order chat, so the buyer has it in writing
+              staffSay(r.id, `💰 Your quote: $${Number(amount)}${eta.trim() ? ` · ready in ${eta.trim()}` : ""}.${reply.trim() ? ` ${reply.trim()}` : ""} Press Pay on your request when you're ready.`);
               toast(`Quote sent — ${r.discord_username || "the buyer"} now sees a Pay button`);
             }}
           >

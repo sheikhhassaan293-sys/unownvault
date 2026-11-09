@@ -32,5 +32,16 @@ export async function discordAnnounceNewOffers(): Promise<{ posted: string[] }> 
   return { posted: [] };
 }
 export async function discordAnnounceOrder(..._a: unknown[]): Promise<{ ok: boolean; message: string }> {
+  void _a;
   return { ok: false, message: "demo" };
+}
+export async function discordAnnouncePrices(..._a: unknown[]): Promise<DiscordStepResult> {
+  void _a;
+  return { ok: false, done: [], failed: [], message: "demo" };
+}
+export async function notifyStaffRequest(..._a: unknown[]): Promise<void> {
+  void _a;
+}
+export async function notifyStaffChat(..._a: unknown[]): Promise<void> {
+  void _a;
 }

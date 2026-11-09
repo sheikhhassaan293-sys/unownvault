@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { themes } from "@/lib/themes";
+import { sb } from "@/lib/supabase/browser";
 import { usernameProblem } from "@/lib/username";
 import { LogoMark } from "../Logo";
 import { useSession, type DemoUser } from "../providers/Session";
@@ -471,6 +472,31 @@ export function LoginForm() {
               <button className="btn btn-block" type="submit" disabled={busy}>
                 {busy ? "Logging in…" : "Log in"}
               </button>
+              {live && (
+                <button
+                  type="button"
+                  className="linkish"
+                  style={{ textAlign: "center" }}
+                  disabled={busy}
+                  onClick={async () => {
+                    if (!/^\S+@\S+\.\S+$/.test(email)) return setErr("Type your email above first, then press this again");
+                    setBusy(true);
+                    const { error } = await sb().auth.resetPasswordForEmail(email.trim(), {
+                      redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/reset")}`,
+                    });
+                    setBusy(false);
+                    setErr(
+                      error
+                        ? /rate limit/i.test(error.message)
+                          ? "Too many reset emails right now. Try again in an hour, or message us on Discord."
+                          : error.message
+                        : "If that email has an account, a reset link is on its way. Open it in this same browser.",
+                    );
+                  }}
+                >
+                  Forgot password?
+                </button>
+              )}
             </form>
           </>
         )}

@@ -26,6 +26,10 @@ export const COPY_FIELDS: CopyField[] = [
   { page: "Prices & tax", key: "price_note", label: "Price note (services, plans, quotes)", kind: "text" },
   { page: "Prices & tax", key: "pay_whop_note", label: "Checkout: card / PayPal / crypto via Whop", kind: "text" },
   { page: "Prices & tax", key: "pay_manual_note", label: "Checkout: other payment methods", kind: "text" },
+  // the /terms page (one section each)
+  { page: "Policies", key: "terms_text", label: "Terms of service", kind: "text" },
+  { page: "Policies", key: "refund_text", label: "Refund policy", kind: "text" },
+  { page: "Policies", key: "privacy_text", label: "Privacy", kind: "text" },
 ];
 
 export const DEFAULT_COPY: Record<string, string> = {
@@ -51,6 +55,12 @@ export const DEFAULT_COPY: Record<string, string> = {
   pay_whop_note:
     "Card, Apple Pay, Google Pay, PayPal or crypto (secure checkout by Whop): the price above, plus sales tax or VAT only if your country charges it. Whop shows the final total before you confirm.",
   pay_manual_note: "Other payment methods: you pay exactly the price above. No tax or fees added.",
+  terms_text:
+    "UnownVault is an independent service. We are not affiliated with, endorsed by, or connected to Niantic, Nintendo or The Pokémon Company.\n\nWhen you order, you get the service described on the item, plan or quote you paid for. Delivery times are estimates and can change with in-game events, availability and your cooldown timer.\n\nUsing third-party services can be against a game's own rules and carries a risk to your game account. By ordering you accept that risk. We can't be responsible for actions a game publisher takes on an account.\n\nPlease give accurate details for your order and reply in your order chat when we need something from you. We may decline or cancel an order and refund it if we can't complete it.\n\nPlans renew automatically each week or month at the price shown until you cancel. You can cancel any time from your account.",
+  refund_text:
+    "Not started yet: if we haven't begun your order, ask in your order chat or on Discord and we'll refund it in full.\n\nWe can't deliver: if we can't complete an order, we refund the part that wasn't delivered.\n\nDelivered orders: once an order is delivered it can't be refunded. If something is wrong with it, tell us within 48 hours and we'll put it right.\n\nPlans: you can cancel any time and keep your benefits until the end of the period you paid for. We don't refund part of a period.\n\nRefunds go back to the payment method you used. Please talk to us before opening a payment dispute; we answer fast and it's usually the quicker fix.",
+  privacy_text:
+    "We keep only what we need to run your order: your trainer name, your Discord name or email, your orders and requests, and the messages in your order chat.\n\nPayments are handled by Whop. We never see or store your card details.\n\nWe don't sell your data or share it with anyone except the services that run this site (hosting, database and payments).\n\nWant your account or data deleted? Message us on Discord or email us and we'll remove it.",
 };
 
 export const parseSteps = (s: string) =>

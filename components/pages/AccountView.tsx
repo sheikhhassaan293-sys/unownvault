@@ -8,6 +8,7 @@ import { useToast } from "../providers/Toast";
 import { Link, useThemedNavigate } from "../providers/Transition";
 import { daysUntil, Reveal, useNow } from "../ui";
 import { RequestRow } from "./RequestForm";
+import { ChatButton, threadOfOrder, useBuyerUnread } from "../OrderChat";
 import { PriorityPicker, PrioritySummary, usePokedex } from "../PriorityPicker";
 
 type Sub = UserSubscription & { tier: SubscriptionTier | null };
@@ -21,6 +22,9 @@ export function AccountView({ subs }: { subs: Sub[] }) {
   const toast = useToast();
   const navigate = useThemedNavigate();
   const now = useNow(60_000);
+  // unread chat messages across this buyer's orders and requests
+  const threadIds = Array.from(new Set([...orders.filter((o) => o.type !== "subscription").map(threadOfOrder), ...requests.map((r) => r.id)]));
+  const { unread, refresh: refreshUnread } = useBuyerUnread(threadIds.map((id) => ({ id })));
 
   if (!ready) return <div style={{ minHeight: "60vh" }} />;
   if (!user) {
@@ -164,6 +168,9 @@ export function AccountView({ subs }: { subs: Sub[] }) {
                             Mark as received
                           </button>
                         )}
+                        {o.type !== "subscription" && (
+                          <ChatButton threadId={threadOfOrder(o)} title={o.item_name} unread={unread[threadOfOrder(o)] ?? 0} onOpened={() => setTimeout(refreshUnread, 1500)} />
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -224,7 +231,7 @@ export function AccountView({ subs }: { subs: Sub[] }) {
         </div>
         <div className="reqlist">
           {allRequests.map((r) => (
-            <RequestRow key={r.id} r={r} />
+            <RequestRow key={r.id} r={r} unread={unread[r.id] ?? 0} />
           ))}
         </div>
       </section>

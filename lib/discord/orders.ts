@@ -118,3 +118,82 @@ export async function announceOrder(orderId: string): Promise<AnnounceResult> {
   await db.from("orders").update({ discord_posted_at: new Date().toISOString() }).eq("id", o.id);
   return { ok: true, message: renewal ? "Logged for staff (renewals aren't posted publicly)" : `Posted in #${PUBLIC_ORDERS_CHANNEL}` };
 }
+
+/* ───────────── staff alerts in #order-log: new custom requests and new chat messages ───────────── */
+
+async function staffLog(embed: Record<string, unknown>): Promise<boolean> {
+  if (!discordConfigured()) return false;
+  const { guild } = await targetGuild();
+  const log = guild ? await findChannel(guild.id, "order-log") : null;
+  if (!log) return false;
+  await dc("POST", `/channels/${log.id}/messages`, { embeds: [embed], allowed_mentions: { parse: [] } });
+  return true;
+}
+const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
+const adminUrl = () => `${(process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "")}/admin`;
+
+/** A new custom request → one post for staff. Safe to call from anyone: it only ever posts once per request. */
+export async function announceRequest(requestId: string): Promise<AnnounceResult> {
+  const db = sbService();
+  const { data: r } = await db
+    .from("custom_requests")
+    .select("id, request_type, target, details, budget, discord_username, user_id, discord_posted_at, created_at")
+    .eq("id", requestId)
+    .single();
+  if (!r) return { ok: false, message: "Request not found" };
+  if (r.discord_posted_at) return { ok: true, message: "Already posted" };
+  // claim it first so two calls can't both post
+  const { data: claimed } = await db
+    .from("custom_requests")
+    .update({ discord_posted_at: new Date().toISOString() })
+    .eq("id", r.id)
+    .is("discord_posted_at", null)
+    .select("id");
+  if (!claimed?.length) return { ok: true, message: "Already posted" };
+  const ok = await staffLog({
+    title: `📝 New custom request ${r.id}`,
+    color: LIME,
+    fields: [
+      { name: "Wants", value: clip(`${r.request_type} · ${r.target}`, 250) },
+      ...(r.details ? [{ name: "Details", value: clip(r.details, 500) }] : []),
+      { name: "Budget", value: r.budget != null ? `$${r.budget}` : "—", inline: true },
+      { name: "Buyer", value: r.discord_username ? `Discord: ${clip(r.discord_username, 40)}` : r.user_id ? "Has an account" : "Guest", inline: true },
+      { name: "Quote it", value: adminUrl(), inline: true },
+    ],
+    timestamp: r.created_at,
+  });
+  return { ok, message: ok ? "Posted in #order-log" : "No #order-log channel" };
+}
+
+/** New buyer chat messages → one staff post (at most one per thread every 5 minutes). */
+export async function announceChat(threadId: string): Promise<AnnounceResult> {
+  const db = sbService();
+  const { data: fresh } = await db
+    .from("order_messages")
+    .select("id, body, created_at")
+    .eq("thread_id", threadId)
+    .eq("sender", "buyer")
+    .eq("seen_by_staff", false)
+    .is("staff_notified_at", null)
+    .order("created_at", { ascending: true })
+    .limit(20);
+  if (!fresh?.length) return { ok: true, message: "Nothing new" };
+  const fiveMinAgo = new Date(Date.now() - 5 * 60_000).toISOString();
+  const { data: recent } = await db.from("order_messages").select("id").eq("thread_id", threadId).gt("staff_notified_at", fiveMinAgo).limit(1);
+  if (recent?.length) return { ok: true, message: "Staff were alerted a moment ago" };
+  const { data: claimed } = await db
+    .from("order_messages")
+    .update({ staff_notified_at: new Date().toISOString() })
+    .in("id", fresh.map((m) => m.id))
+    .is("staff_notified_at", null)
+    .select("id");
+  if (!claimed?.length) return { ok: true, message: "Already alerted" };
+  const ok = await staffLog({
+    title: `💬 New message on ${threadId}`,
+    color: ORANGE,
+    description: clip(fresh.map((m) => `“${m.body}”`).join("\n"), 900),
+    fields: [{ name: "Reply", value: adminUrl(), inline: true }],
+    timestamp: fresh[fresh.length - 1].created_at,
+  });
+  return { ok, message: ok ? "Posted in #order-log" : "No #order-log channel" };
+}

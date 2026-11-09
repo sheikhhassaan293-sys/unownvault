@@ -9,7 +9,7 @@
  * Both modes expose the same functions, so pages don't care which one is running.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { syncAdminRole } from "@/app/actions";
+import { notifyStaffRequest, syncAdminRole } from "@/app/actions";
 import { sb } from "@/lib/supabase/browser";
 import { LIVE } from "@/lib/supabase/env";
 import { normalizeRows, type CustomRequest, type Order, type Priorities, type SubscriptionTier, type UserSubscription } from "@/lib/types";
@@ -313,6 +313,8 @@ export function SessionProvider({ demoOrders, demoRequests, children }: { demoOr
     if (error) throw new Error(error.message);
     const res = data as { id: string; key: string | null };
     if (res.key) rememberGuestRequest({ id: res.id, key: res.key });
+    // staff alert in Discord (posts once per request; never blocks the buyer)
+    notifyStaffRequest(res.id).catch(() => null);
     const saved: CustomRequest = { ...base, id: res.id, image_url, access_key: res.key };
     setRequests((prev) => [saved, ...prev]);
     return saved;

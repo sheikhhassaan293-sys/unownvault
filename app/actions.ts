@@ -266,6 +266,28 @@ export async function discordRefreshChannel(name: string): Promise<DiscordStepRe
   }
 }
 
+/** Tell staff (Discord #order-log) about a new custom request. Open to guests; posts once per request. */
+export async function notifyStaffRequest(requestId: string): Promise<void> {
+  if (!LIVE || !/^UV-[A-Z0-9]{3,12}$/i.test(requestId)) return;
+  try {
+    const { announceRequest } = await import("@/lib/discord/orders");
+    await announceRequest(requestId);
+  } catch (e) {
+    console.warn("[discord] request alert failed", e instanceof Error ? e.message : e);
+  }
+}
+
+/** Tell staff about new buyer chat messages. The server only posts if there really are unread ones. */
+export async function notifyStaffChat(threadId: string): Promise<void> {
+  if (!LIVE || !/^UV-[A-Z0-9]{3,12}$/i.test(threadId)) return;
+  try {
+    const { announceChat } = await import("@/lib/discord/orders");
+    await announceChat(threadId);
+  } catch (e) {
+    console.warn("[discord] chat alert failed", e instanceof Error ? e.message : e);
+  }
+}
+
 /** Admin → Orders: post an order to Discord by hand (e.g. one made before auto-posting, or a confirmed manual payment). */
 export async function discordAnnounceOrder(orderId: string): Promise<{ ok: boolean; message: string }> {
   try {
