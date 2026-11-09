@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { cooldownText, type Cooldown, type CustomRequest } from "@/lib/types";
 import { CooldownQuestion } from "../Cooldown";
 import { OrderChat, useBuyerUnread } from "../OrderChat";
@@ -353,7 +354,8 @@ export function RequestDialog({ id, onClose, justSent = false }: { id: string; o
     };
   }, [close]);
 
-  return (
+  // drawn at the top of the page (a portal), so nothing on the page can show through it
+  return createPortal(
     <motion.div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && close()} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <motion.div
         ref={box}
@@ -458,7 +460,8 @@ export function RequestDialog({ id, onClose, justSent = false }: { id: string; o
           </>
         )}
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body,
   );
 }
 
@@ -497,8 +500,9 @@ export function RequestRow({ r, unread = 0 }: { r: CustomRequest; unread?: numbe
 /** Logged-in users see their requests and quote status (refreshing while one is waiting). */
 export function PastRequests() {
   const { user, requests } = useSession();
-  // (an admin's session holds everyone's requests — show only your own here)
-  const mine = requests.filter((r) => !user?.id || !r.user_id || r.user_id === user.id);
+  // Buyers and guests only ever receive their own requests from the database. The admin account
+  // receives everyone's (for the admin panel), so here it's narrowed to the signed-in person's own.
+  const mine = requests.filter((r) => !user?.id || r.user_id === user.id);
   useQuotePolling(mine.some((r) => r.status === "new"));
   const { unread } = useBuyerUnread(mine.map((r) => ({ id: r.id, key: r.access_key ?? null })));
   if (!mine.length) return null;

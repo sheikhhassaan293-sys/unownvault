@@ -515,7 +515,9 @@
   /* ── Readability pass ─────────────────────────────────────────────
      Same look, easier reading: brighter secondary text, calmer panels over the
      animated backgrounds, and small labels that are a touch bigger with less spacing. */
-  .theme-root { --muted: rgba(var(--text-rgb), 0.8); --dim: rgba(var(--text-rgb), 0.62); }
+  :root, .theme-root { --muted: rgba(var(--text-rgb), 0.8); --dim: rgba(var(--text-rgb), 0.62); }
+  /* popups: solid, never taller than the screen, scroll inside */
+  .dlg { background: var(--bg2); max-height: calc(100svh - 28px); overflow-y: auto; overscroll-behavior: contain; }
   .panel { background: color-mix(in srgb, var(--bg2) 93%, transparent); }
   .h2 { line-height: 1.04; }
   .lead { line-height: 1.6; }

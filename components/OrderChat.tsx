@@ -9,6 +9,7 @@
  */
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { notifyStaffChat } from "@/app/actions";
 import { sb } from "@/lib/supabase/browser";
 import { LIVE } from "@/lib/supabase/env";
@@ -153,6 +154,9 @@ export function ChatButton({
         💬 Chat
         {unread > 0 && <i className="chat-dot" aria-label={`${unread} unread`} />}
       </button>
+      {/* drawn at the top of the page (a portal), so nothing on the page can show through it */}
+      {typeof document !== "undefined" &&
+        createPortal(
       <AnimatePresence>
         {open && (
           <motion.div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && setOpen(false)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -168,7 +172,9 @@ export function ChatButton({
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+          document.body,
+        )}
     </>
   );
 }

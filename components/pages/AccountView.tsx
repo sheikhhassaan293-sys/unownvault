@@ -16,7 +16,11 @@ type Sub = UserSubscription & { tier: SubscriptionTier | null };
 const fmt = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
 export function AccountView({ subs }: { subs: Sub[] }) {
-  const { user, ready, signOut, orders, requests, markReceived, live, subscriptions, priorities, savePriorities } = useSession();
+  const { user, ready, signOut, orders: allOrders, requests: everyRequest, markReceived, live, subscriptions, priorities, savePriorities } = useSession();
+  // The admin account receives everyone's orders and requests (for the admin panel).
+  // This page is "my account", so it only ever shows the signed-in person's own.
+  const orders = allOrders.filter((o) => !user?.id || o.user_id === user.id);
+  const requests = everyRequest.filter((r) => !user?.id || r.user_id === user.id);
   const { nameOf } = usePokedex();
   const [editing, setEditing] = useState(false);
   const toast = useToast();
