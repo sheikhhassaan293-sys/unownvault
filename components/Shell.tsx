@@ -124,11 +124,14 @@ function OfflineGate({ path, children }: { path: string; children: React.ReactNo
           UnownVault
         </div>
         <h1 className="h2" style={{ margin: "14px 0 12px" }}>
-          Website not available
+          Unavailable
         </h1>
-        <p className="muted" style={{ whiteSpace: "pre-line" }}>
-          {copy.offline_message || "We're offline for a little while. Please check back soon."}
-        </p>
+        {/* optional extra line from Admin; the old default wording is no longer shown */}
+        {copy.offline_message && !/offline for a little while/i.test(copy.offline_message) && (
+          <p className="muted" style={{ whiteSpace: "pre-line" }}>
+            {copy.offline_message}
+          </p>
+        )}
         <p style={{ marginTop: 26 }}>
           <a className="linkish" href="/login">
             Owner log in

@@ -262,7 +262,7 @@ export function AdminView() {
                     type="checkbox"
                     checked={content.settings.copy.site_offline === "on"}
                     onChange={(e) => {
-                      if (e.target.checked && !window.confirm("Switch the website OFF? Visitors will only see “Website not available” until you switch it back on.")) return;
+                      if (e.target.checked && !window.confirm("Switch the website OFF? Visitors will only see “Unavailable” until you switch it back on.")) return;
                       setSetting("copy", { ...content.settings.copy, site_offline: e.target.checked ? "on" : "" });
                     }}
                   />
@@ -270,16 +270,17 @@ export function AdminView() {
                   Switch the website off
                 </label>
                 <span className="help">
-                  Visitors see a “Website not available” screen instead of the site. You still see everything while logged in as admin, and can log in from that
+                  Visitors see an “Unavailable” screen instead of the site. You still see everything while logged in as admin, and can log in from that
                   screen&apos;s “Owner log in” link.
                 </span>
               </div>
               <div className="f full">
-                <label htmlFor="off-msg">Message visitors see</label>
+                <label htmlFor="off-msg">Extra line under “Unavailable” (optional)</label>
                 <textarea
                   id="off-msg"
                   rows={2}
-                  value={content.settings.copy.offline_message ?? ""}
+                  placeholder="Leave empty to show only “Unavailable”"
+                  value={/offline for a little while/i.test(content.settings.copy.offline_message ?? "") ? "" : (content.settings.copy.offline_message ?? "")}
                   onChange={(e) => setSetting("copy", { ...content.settings.copy, offline_message: e.target.value })}
                 />
               </div>
