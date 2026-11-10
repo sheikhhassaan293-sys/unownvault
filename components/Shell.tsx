@@ -74,14 +74,16 @@ export function Shell({
                     <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[90] btn sm">
                       Skip to content
                     </a>
-                    <MaintenanceBar />
-                    <UsernameGate />
-                    <Navbar />
-                    <main id="main" ref={main} style={{ position: "relative", zIndex: 5 }}>
-                      {children}
-                    </main>
-                    <Footer />
-                    <TabBar />
+                    <OfflineGate path={path}>
+                      <MaintenanceBar />
+                      <UsernameGate />
+                      <Navbar />
+                      <main id="main" ref={main} style={{ position: "relative", zIndex: 5 }}>
+                        {children}
+                      </main>
+                      <Footer />
+                      <TabBar />
+                    </OfflineGate>
                   </div>
                 </CheckoutProvider>
               </TransitionProvider>
@@ -90,6 +92,50 @@ export function Shell({
         </ToastProvider>
       </MotionConfig>
     </SettingsProvider>
+  );
+}
+
+/**
+ * The owner's "Website off" switch (Admin → Site & text). While it's on, visitors see a
+ * "not available" screen instead of the site. The admin still sees everything (with a reminder
+ * bar), and the login page stays reachable so the owner can sign in and switch it back.
+ */
+function OfflineGate({ path, children }: { path: string; children: React.ReactNode }) {
+  const { copy } = useSettings();
+  const { isAdmin, live, user, ready } = useSession();
+  const off = copy.site_offline === "on";
+  if (!off) return <>{children}</>;
+  const ownerPage = /^\/(login|admin|reset|auth)(\/|$)/.test(path);
+  const admin = live ? ready && !!user && isAdmin : false;
+  if (admin || ownerPage) {
+    return (
+      <>
+        <div className="maint" role="status">
+          The website is switched OFF: visitors see “not available”. Turn it back on in Admin → Site &amp; text.
+        </div>
+        {children}
+      </>
+    );
+  }
+  return (
+    <main id="main" className="auth-wrap" style={{ position: "relative", zIndex: 5, minHeight: "100svh" }}>
+      <div className="panel auth-card" style={{ textAlign: "center" }} role="status">
+        <div className="label bare" style={{ justifyContent: "center" }}>
+          UnownVault
+        </div>
+        <h1 className="h2" style={{ margin: "14px 0 12px" }}>
+          Website not available
+        </h1>
+        <p className="muted" style={{ whiteSpace: "pre-line" }}>
+          {copy.offline_message || "We're offline for a little while. Please check back soon."}
+        </p>
+        <p style={{ marginTop: 26 }}>
+          <a className="linkish" href="/login">
+            Owner log in
+          </a>
+        </p>
+      </div>
+    </main>
   );
 }
 

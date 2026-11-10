@@ -55,6 +55,9 @@ export const DEFAULT_COPY: Record<string, string> = {
   pay_whop_note:
     "Card, Apple Pay, Google Pay, PayPal or crypto (secure checkout by Whop): the price above, plus sales tax or VAT only if your country charges it. Whop shows the final total before you confirm.",
   pay_manual_note: "Other payment methods: you pay exactly the price above. No tax or fees added.",
+  // "Website off" switch: "on" = visitors see the not-available screen
+  site_offline: "",
+  offline_message: "We're offline for a little while. Please check back soon.",
   terms_text:
     "UnownVault is an independent service. We are not affiliated with, endorsed by, or connected to Niantic, Nintendo or The Pokémon Company.\n\nWhen you order, you get the service described on the item, plan or quote you paid for. Delivery times are estimates and can change with in-game events, availability and your cooldown timer.\n\nUsing third-party services can be against a game's own rules and carries a risk to your game account. By ordering you accept that risk. We can't be responsible for actions a game publisher takes on an account.\n\nPlease give accurate details for your order and reply in your order chat when we need something from you. We may decline or cancel an order and refund it if we can't complete it.\n\nPlans renew automatically each week or month at the price shown until you cancel. You can cancel any time from your account.",
   refund_text:

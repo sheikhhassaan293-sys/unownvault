@@ -253,6 +253,38 @@ export function AdminView() {
 
       {tab === "Site & text" && (
         <div className="agrid">
+          <section className="panel asec">
+            <h2 className="label bare">Website on / off</h2>
+            <div className="form">
+              <div className="f full">
+                <label className="switch">
+                  <input
+                    type="checkbox"
+                    checked={content.settings.copy.site_offline === "on"}
+                    onChange={(e) => {
+                      if (e.target.checked && !window.confirm("Switch the website OFF? Visitors will only see “Website not available” until you switch it back on.")) return;
+                      setSetting("copy", { ...content.settings.copy, site_offline: e.target.checked ? "on" : "" });
+                    }}
+                  />
+                  <span />
+                  Switch the website off
+                </label>
+                <span className="help">
+                  Visitors see a “Website not available” screen instead of the site. You still see everything while logged in as admin, and can log in from that
+                  screen&apos;s “Owner log in” link.
+                </span>
+              </div>
+              <div className="f full">
+                <label htmlFor="off-msg">Message visitors see</label>
+                <textarea
+                  id="off-msg"
+                  rows={2}
+                  value={content.settings.copy.offline_message ?? ""}
+                  onChange={(e) => setSetting("copy", { ...content.settings.copy, offline_message: e.target.value })}
+                />
+              </div>
+            </div>
+          </section>
           {SITE_GROUPS.map((g) => (
             <section key={g.title} className="panel asec">
               <h2 className="label bare">{g.title}</h2>

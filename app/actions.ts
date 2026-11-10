@@ -70,7 +70,8 @@ export async function createCheckout(
   const { db, user } = await currentUser();
   // guests can only pay a custom request they hold the private key for
   if (!user && !(kind === "custom" && extras.guestKey)) return { ok: false, error: "signin" };
-  const { data: settings } = await db.from("site_settings").select("maintenance, queue_open").eq("id", 1).single();
+  const { data: settings } = await db.from("site_settings").select("maintenance, queue_open, copy").eq("id", 1).single();
+  if ((settings?.copy as Record<string, string> | null)?.site_offline === "on") return { ok: false, error: "The website is offline right now — please check back soon." };
   if (settings?.maintenance) return { ok: false, error: "Checkout is paused for maintenance — try again soon." };
   if (settings?.queue_open === false) return { ok: false, error: "Orders are paused right now — check back soon." };
   try {
