@@ -7,6 +7,7 @@ import { themeForPath, themeVars } from "@/lib/themes";
 import type { CustomRequest, Order } from "@/lib/types";
 import { Background } from "./background/Background";
 import { Footer, Navbar, TabBar } from "./Chrome";
+import { OfferPopup } from "./OfferPopup";
 import { CheckoutProvider } from "./providers/Checkout";
 import { CurrencyProvider } from "./providers/Currency";
 import { SessionProvider, useSession } from "./providers/Session";
@@ -83,6 +84,7 @@ export function Shell({
                       </main>
                       <Footer />
                       <TabBar />
+                      <OfferPopup />
                     </OfflineGate>
                   </div>
                 </CheckoutProvider>

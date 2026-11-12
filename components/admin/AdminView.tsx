@@ -16,8 +16,9 @@ import { DiscordSetup } from "./DiscordSetup";
 import { discordAnnounceOrder } from "@/app/actions";
 import { ChatButton, threadOfOrder, useStaffUnread } from "../OrderChat";
 import { ListEditor } from "./ListEditor";
+import { MembersAdmin } from "./Members";
 
-const TABS = ["Site & text", "Plans", "Services", "Offers", "FAQ", "Orders", "Requests", "Discord", "Backup"] as const;
+const TABS = ["Site & text", "Plans", "Services", "Offers", "FAQ", "Orders", "Requests", "Members", "Discord", "Backup"] as const;
 type Tab = (typeof TABS)[number];
 
 const uid = (p: string) => `${p}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
@@ -465,7 +466,11 @@ export function AdminView() {
         />
       )}
 
-      {tab === "Requests" && <RequestsAdmin requests={requests} onUpdate={updateRequest} unread={chatUnread} onSeen={seen} />}
+      {tab === "Requests" && (
+        <RequestsAdmin requests={requests.filter((r) => !r.is_offer)} onUpdate={updateRequest} unread={chatUnread} onSeen={seen} />
+      )}
+
+      {tab === "Members" && <MembersAdmin />}
 
       {tab === "Discord" &&
         (live ? (

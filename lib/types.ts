@@ -165,6 +165,8 @@ export type CustomRequest = {
   eta?: string | null;
   /** guest requests only: the private key in the buyer's link */
   access_key?: string | null;
+  /** a personal offer the owner sent (already priced; pops up for the member) */
+  is_offer?: boolean;
   image_url: string | null;
   status: CustomRequestStatus;
   quote_amount: number | null;
