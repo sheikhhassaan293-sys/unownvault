@@ -9,7 +9,9 @@ export async function GET(request: NextRequest) {
   const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/";
   // Discord sent them back with an error (e.g. they pressed Cancel)
   if (url.searchParams.get("error") || url.searchParams.get("error_description")) {
-    return NextResponse.redirect(new URL("/login?error=discord", url.origin));
+    // Discord accounts made with only a phone number have no email, and sign-in needs one
+    const noEmail = /email/i.test(url.searchParams.get("error_description") ?? "");
+    return NextResponse.redirect(new URL(`/login?error=${noEmail ? "noemail" : "discord"}`, url.origin));
   }
   if (code) {
     const db = await sbServer();

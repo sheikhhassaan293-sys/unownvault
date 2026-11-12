@@ -79,6 +79,12 @@ export function SignupFlow({ taken }: { taken: string[] }) {
   }>({ state: "idle", msg: "3–20 characters · letters, numbers, underscore" });
   const input = useRef<HTMLInputElement>(null);
 
+  // /signup?email=1 (from the "your Discord has no email" message) opens the email form straight away
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- read the link once after load
+    if (new URLSearchParams(window.location.search).get("email") === "1") setShowEmail(true);
+  }, []);
+
   // arriving from Discord / an email link, or signed in without a name yet → straight to step 2
   useEffect(() => {
     if (!ready) return;
@@ -384,11 +390,14 @@ export function LoginForm() {
   const [busy, setBusy] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
 
+  const [noEmail, setNoEmail] = useState(false);
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("error")) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- error passed back from the login link
-      setErr("That link expired or didn't work — try again.");
-    }
+    const e = new URLSearchParams(window.location.search).get("error");
+    /* eslint-disable react-hooks/set-state-in-effect -- error passed back from the login link */
+    if (e === "noemail") setNoEmail(true);
+    else if (e === "discord") setErr("Discord sign-in was cancelled or didn't finish. Try again.");
+    else if (e) setErr("That link expired or didn't work. Try again.");
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
   const go = async (provider: DemoUser["provider"]) => {
@@ -419,6 +428,20 @@ export function LoginForm() {
           : "Demo: any details work — you'll be signed in as a sample trainer."}
       </p>
       <div className="stack">
+        {noEmail && (
+          <div className="noemail" role="alert">
+            <b>Your Discord account has no email on it</b>, so Discord sign-in can&apos;t work yet. Pick one:
+            <ol>
+              <li>
+                <Link href="/signup?email=1" className="linkish">
+                  Create an account with email instead
+                </Link>{" "}
+                (takes 30 seconds), or
+              </li>
+              <li>In Discord, go to User Settings → My Account → add an email, then press Continue with Discord again.</li>
+            </ol>
+          </div>
+        )}
         <ProviderButtons onPick={go} />
         {!showEmail ? (
           <>
